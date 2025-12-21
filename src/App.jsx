@@ -1,7 +1,9 @@
 import { gql } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
+import { useParams } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 
-const QUERY = gql`
+const INTROSPECTION_QUERY = gql`
   query IntrospectionQuery {
     __schema {
       queryType {
@@ -103,6 +105,17 @@ const QUERY = gql`
   }
 `
 
+function makeQueryGql(fieldName) {
+  return gql`
+    query {
+      ${fieldName} {
+        code
+        name
+      }
+    }
+  `
+}
+
 function fieldRequiresInputs(field) {
   for (const arg of field.args) {
     if ((arg.type.kind === "NON_NULL") && (arg.defaultVaule == null)) {
@@ -112,24 +125,61 @@ function fieldRequiresInputs(field) {
   return false
 }
 
-function App() {
-  const { loading, error, data } = useQuery(QUERY);
+function findTypeName(type) {
+  if (type.name) {
+    return type.name
+  } else {
+    return findTypeName(type.ofType)
+  }
+}
 
-  if (!data) {
+function App() {
+  const { data: introspectionData } = useQuery(INTROSPECTION_QUERY);
+  const params = useParams({ strict: false })
+
+  const rootFieldName = params.rootField
+  const { data: fieldData } = useQuery(makeQueryGql(rootFieldName) || "", {skip: !rootFieldName});
+
+  if (!introspectionData) {
     return <div />
   }
 
-  return (
-    <>
-      {data.__schema.queryType.fields.map(f => {
-        if (fieldRequiresInputs(f)) {
-          return <div key={f.name}>{f.name}</div>
-        } else {
-          return <div key={f.name}>{f.name} (callable)</div>
-        }
-      })}
-    </>
-  )
+  if (params.rootField) {
+
+    let objectName = ""
+
+    for (const f of introspectionData.__schema.queryType.fields) {
+      if (f.name === params.rootField) {
+        objectName = findTypeName(f.type)
+      }
+    }
+
+    for (const t of introspectionData.__schema.types) {
+      if (t.name === objectName) {
+        console.log(t)
+      }
+    }
+  }
+
+  if (fieldData) {
+    console.log(fieldData)
+  }
+
+  if (!rootFieldName) {
+    return (
+      <>
+        {introspectionData.__schema.queryType.fields.map(f => {
+          if (fieldRequiresInputs(f)) {
+            return <div key={f.name}>{f.name}</div>
+          } else {
+            return <div key={f.name}><Link to={`/${f.name}`}>{f.name}</Link></div>
+          }
+        })}
+      </>
+    )
+  } else if (fieldData) {
+    return <>{fieldData[rootFieldName].map(item => <div key={item.code}>{item.code} {item.name}</div>)}</>
+  }
 }
 
 export default App

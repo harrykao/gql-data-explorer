@@ -1,9 +1,10 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import App from './App.jsx'
 
 import { ApolloClient, HttpLink, InMemoryCache } from "@apollo/client";
 import { ApolloProvider } from "@apollo/client/react";
+import { RouterProvider } from '@tanstack/react-router'
+import { router } from './router'
 
 const client = new ApolloClient({
   link: new HttpLink({ uri: "https://countries.trevorblades.com/" }),
@@ -13,7 +14,7 @@ const client = new ApolloClient({
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ApolloProvider client={client}>
-      <App />
+      <RouterProvider router={router} />
     </ApolloProvider>
   </StrictMode>,
 )
