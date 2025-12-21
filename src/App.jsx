@@ -2,108 +2,7 @@ import { gql } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
 import { useParams } from '@tanstack/react-router'
 import { Link } from '@tanstack/react-router'
-
-const INTROSPECTION_QUERY = gql`
-  query IntrospectionQuery {
-    __schema {
-      queryType {
-        ...FullType
-      }
-      mutationType {
-        name
-      }
-      subscriptionType {
-        name
-      }
-      types {
-        ...FullType
-      }
-      directives {
-        name
-        description
-        locations
-        args {
-          ...InputValue
-        }
-      }
-    }
-  }
-
-  fragment FullType on __Type {
-    kind
-    name
-    description
-    fields(includeDeprecated: true) {
-      name
-      description
-      args {
-        ...InputValue
-      }
-      type {
-        ...TypeRef
-      }
-      isDeprecated
-      deprecationReason
-    }
-    inputFields {
-      ...InputValue
-    }
-    interfaces {
-      ...TypeRef
-    }
-    enumValues(includeDeprecated: true) {
-      name
-      description
-      isDeprecated
-      deprecationReason
-    }
-    possibleTypes {
-      ...TypeRef
-    }
-  }
-
-  fragment InputValue on __InputValue {
-    name
-    description
-    type {
-      ...TypeRef
-    }
-    defaultValue
-  }
-
-  fragment TypeRef on __Type {
-    kind
-    name
-    ofType {
-      kind
-      name
-      ofType {
-        kind
-        name
-        ofType {
-          kind
-          name
-          ofType {
-            kind
-            name
-            ofType {
-              kind
-              name
-              ofType {
-                kind
-                name
-                ofType {
-                  kind
-                  name
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-`
+import useIntrospection from "./introspection"
 
 function makeQueryGql(fieldName) {
   return gql`
@@ -116,15 +15,6 @@ function makeQueryGql(fieldName) {
   `
 }
 
-function fieldRequiresInputs(field) {
-  for (const arg of field.args) {
-    if ((arg.type.kind === "NON_NULL") && (arg.defaultVaule == null)) {
-      return true
-    }
-  }
-  return false
-}
-
 function findTypeName(type) {
   if (type.name) {
     return type.name
@@ -134,13 +24,14 @@ function findTypeName(type) {
 }
 
 function App() {
-  const { data: introspectionData } = useQuery(INTROSPECTION_QUERY);
+
+  const schema = useIntrospection()
   const params = useParams({ strict: false })
 
   const rootFieldName = params.rootField
   const { data: fieldData } = useQuery(makeQueryGql(rootFieldName) || "", {skip: !rootFieldName});
 
-  if (!introspectionData) {
+  if (!schema) {
     return <div />
   }
 
@@ -148,13 +39,13 @@ function App() {
 
     let objectName = ""
 
-    for (const f of introspectionData.__schema.queryType.fields) {
+    for (const f of schema.data.__schema.queryType.fields) {
       if (f.name === params.rootField) {
         objectName = findTypeName(f.type)
       }
     }
 
-    for (const t of introspectionData.__schema.types) {
+    for (const t of schema.data.__schema.types) {
       if (t.name === objectName) {
         console.log(t)
       }
@@ -168,8 +59,8 @@ function App() {
   if (!rootFieldName) {
     return (
       <>
-        {introspectionData.__schema.queryType.fields.map(f => {
-          if (fieldRequiresInputs(f)) {
+        {schema.getRootFields().map(f => {
+          if (f.requiresArguments) {
             return <div key={f.name}>{f.name}</div>
           } else {
             return <div key={f.name}><Link to={`/${f.name}`}>{f.name}</Link></div>
