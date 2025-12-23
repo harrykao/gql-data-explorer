@@ -1,140 +1,62 @@
 import { gql } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
-import { useParams } from '@tanstack/react-router'
-import { Link } from '@tanstack/react-router'
+import { getIntrospectionQuery } from 'graphql';
+import { IntrospectionQuery, IntrospectionObjectType } from 'graphql';
 
-const _INTROSPECTION_QUERY = gql`
-  query IntrospectionQuery {
-    __schema {
-      queryType {
-        ...FullType
-      }
-      mutationType {
-        name
-      }
-      subscriptionType {
-        name
-      }
-      types {
-        ...FullType
-      }
-      directives {
-        name
-        description
-        locations
-        args {
-          ...InputValue
-        }
-      }
-    }
-  }
-
-  fragment FullType on __Type {
-    kind
-    name
-    description
-    fields(includeDeprecated: true) {
-      name
-      description
-      args {
-        ...InputValue
-      }
-      type {
-        ...TypeRef
-      }
-      isDeprecated
-      deprecationReason
-    }
-    inputFields {
-      ...InputValue
-    }
-    interfaces {
-      ...TypeRef
-    }
-    enumValues(includeDeprecated: true) {
-      name
-      description
-      isDeprecated
-      deprecationReason
-    }
-    possibleTypes {
-      ...TypeRef
-    }
-  }
-
-  fragment InputValue on __InputValue {
-    name
-    description
-    type {
-      ...TypeRef
-    }
-    defaultValue
-  }
-
-  fragment TypeRef on __Type {
-    kind
-    name
-    ofType {
-      kind
-      name
-      ofType {
-        kind
-        name
-        ofType {
-          kind
-          name
-          ofType {
-            kind
-            name
-            ofType {
-              kind
-              name
-              ofType {
-                kind
-                name
-                ofType {
-                  kind
-                  name
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-`
-
-interface TypeInfo {
-    scalarTypeName: string
+export interface GqlType {
+    name: string
     isNullable: boolean
     isList: boolean
 }
 
-interface Field {
+export interface GqlField {
     name: string
-    scalarTypeName: string
-    isNullable: boolean
-    isList: boolean
+    type: GqlType
     requiresArguments: boolean
 }
 
-class Schema {
+export interface GqlObject {
+    fields: Map<string, GqlField>
+}
 
-    data: any
+class TypeNotFoundError extends Error {}
 
-    constructor(data: any) {
+class FieldNotFoundError extends Error {}
+
+export class Introspection {
+
+    data: IntrospectionQuery
+
+    constructor(data: IntrospectionQuery) {
         this.data = data
     }
 
-    getRootFields(): Field[] {
-        return this.data.__schema.queryType.fields.map(this._createFieldStruct, this)
+    getRootObject(): GqlObject {
+        return this.getObjectByTypeName(this.data.__schema.queryType.name)
     }
 
-    _extractTypeInformation(typeSchema: any): TypeInfo {
+    getObjectByTypeName(typeName: string): GqlObject {
+        const objectType = this._getObjectTypeByName(typeName)
+        const fields = objectType.fields.map(this._createFieldStruct, this)
+        return {
+            fields: new Map(fields.map(f => [f.name, f]))
+        }
+    }
+
+    _getObjectTypeByName(typeName: string): IntrospectionObjectType {
+        const matchingTypes = this.data.__schema.types.filter<IntrospectionObjectType>(
+          (t): t is IntrospectionObjectType => (t.kind === "OBJECT") && (t.name === typeName)
+        )
+        if (matchingTypes.length === 0) {
+            throw new TypeNotFoundError()
+        }
+        return matchingTypes[0]
+    }
+
+    _extractTypeInformation(typeSchema: any): GqlType {
 
         const typeInfo = (typeSchema.ofType === null) ? {
-            scalarTypeName: "PLACEHOLDER",
+            name: "PLACEHOLDER",
             isNullable: true,
             isList: false,
         } : this._extractTypeInformation(typeSchema.ofType)
@@ -146,7 +68,7 @@ class Schema {
         }
 
         if (typeSchema.name) {
-            typeInfo.scalarTypeName = typeSchema.name
+            typeInfo.name = typeSchema.name
         }
 
         return typeInfo
@@ -161,22 +83,23 @@ class Schema {
         return false
     }
 
-    _createFieldStruct(fieldSchema: any): Field {
+    _createFieldStruct(fieldSchema: any): GqlField {
         return {
             name: fieldSchema.name,
-            ...this._extractTypeInformation(fieldSchema.type),
+            type: this._extractTypeInformation(fieldSchema.type),
             requiresArguments: this._anyArgsRequired(fieldSchema.args)
         }
     }
 }
 
-export default function useIntrospection(): Schema | null {
+export default function useIntrospection(): Introspection | null {
 
-    const { data } = useQuery(_INTROSPECTION_QUERY);
+    const { data } = useQuery<IntrospectionQuery>(gql(getIntrospectionQuery()));
 
     if (!data) {
         return null
     }
 
-    return new Schema(data)
+    console.log(data)
+    return new Introspection(data)
 }

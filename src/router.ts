@@ -8,26 +8,12 @@ const rootRoute = createRootRoute()
 
 const rootQueryRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: '/',
-    component: App
-})
-
-const rootFieldRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '$rootField',
-    component: App
-})
-
-const rootFieldChildFieldRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '$rootField/$childField',
+    path: '$',
     component: App
 })
 
 const routeTree = rootRoute.addChildren([
     rootQueryRoute,
-    rootFieldRoute,
-    rootFieldChildFieldRoute,
 ])
 
 export const router = createRouter({ routeTree })
