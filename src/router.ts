@@ -1,23 +1,18 @@
+import { createRouter, Router } from "@tanstack/react-router";
+import { RouterProvider, createRootRoute, createRoute } from "@tanstack/react-router";
+import App from "./App";
 
-import { createRouter, Router } from '@tanstack/react-router'
-import { RouterProvider, createRootRoute, createRoute } from '@tanstack/react-router'
-import App from './App'
-
-
-const rootRoute = createRootRoute()
+const rootRoute = createRootRoute();
 
 const rootQueryRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '$',
-    component: App
-})
+  getParentRoute: () => rootRoute,
+  path: "$",
+  component: App,
+});
 
-const routeTree = rootRoute.addChildren([
-    rootQueryRoute,
-])
+const routeTree = rootRoute.addChildren([rootQueryRoute]);
 
-export const router = createRouter({ routeTree })
-
+export const router = createRouter({ routeTree });
 
 // declare module '@tanstack/react-router' {
 //   interface Register {
