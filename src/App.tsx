@@ -1,18 +1,19 @@
 import { gql } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
-import { Link, useParams } from "@tanstack/react-router";
+import { useParams } from "@tanstack/react-router";
 import { getIntrospectionQuery } from "graphql";
 import React from "react";
-import { GqlObject } from "./introspection";
+import GqlList from "./GqlList";
+import GqlObject from "./GqlObject";
+import { GqlObjectDef } from "./introspection";
 import useQueryBuilder from "./queryBuilder";
 
-// TODO
 function App() {
     const params = useParams({ strict: false });
     const splat = params._splat;
     const { introspection, queryBuilder } = useQueryBuilder();
 
-    const parentObjects: GqlObject[] = [];
+    const parentObjects: GqlObjectDef[] = [];
     const parentSpecs: string[] = [];
 
     if (introspection && splat) {
@@ -21,7 +22,7 @@ function App() {
         parentSpecs.push(splat);
     }
 
-    let targetObject: GqlObject | null = null;
+    let targetObject: GqlObjectDef | null = null;
 
     if (introspection) {
         if (splat === "") {
@@ -54,30 +55,10 @@ function App() {
     }
 
     if (targetData && Array.isArray(targetData)) {
-        return (
-            <>
-                {targetData.map((row) => (
-                    <div>{Object.values(row)}</div>
-                ))}
-            </>
-        ); // TODO: add key
+        return <GqlList def={targetObject} data={targetData} />;
+    } else {
+        return <GqlObject def={targetObject} />;
     }
-
-    return (
-        <>
-            {[...targetObject.fields.values()].map((f) => {
-                if (f.requiresArguments) {
-                    return <div key={f.name}>{f.name}</div>;
-                } else {
-                    return (
-                        <div key={f.name}>
-                            <Link to={`/${f.name}`}>{f.name}</Link>
-                        </div>
-                    );
-                }
-            })}
-        </>
-    );
 }
 
 export default App;

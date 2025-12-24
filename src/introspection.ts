@@ -10,20 +10,20 @@ import {
     IntrospectionQuery,
 } from "graphql";
 
-export interface GqlType {
+export interface GqlTypeDef {
     name: string;
     isNullable: boolean;
     isList: boolean;
 }
 
-export interface GqlField {
+export interface GqlFieldDef {
     name: string;
-    type: GqlType;
+    type: GqlTypeDef;
     requiresArguments: boolean;
 }
 
-export interface GqlObject {
-    fields: Map<string, GqlField>;
+export interface GqlObjectDef {
+    fields: Map<string, GqlFieldDef>;
 }
 
 class TypeNotFoundError extends Error {}
@@ -35,11 +35,11 @@ export class Introspection {
         this.data = data;
     }
 
-    getRootObject(): GqlObject {
+    getRootObject(): GqlObjectDef {
         return this.getObjectByTypeName(this.data.__schema.queryType.name);
     }
 
-    getObjectByTypeName(typeName: string): GqlObject {
+    getObjectByTypeName(typeName: string): GqlObjectDef {
         const objectType = this._getObjectTypeByName(typeName);
         const fields = objectType.fields.map(this._createFieldStruct, this);
         return {
@@ -59,7 +59,7 @@ export class Introspection {
 
     _extractTypeInformation(
         typeSchema: IntrospectionInputTypeRef | IntrospectionOutputTypeRef,
-    ): GqlType {
+    ): GqlTypeDef {
         const typeInfo =
             typeSchema.kind === "LIST" || typeSchema.kind === "NON_NULL"
                 ? this._extractTypeInformation(typeSchema.ofType)
@@ -89,7 +89,7 @@ export class Introspection {
         return false;
     }
 
-    _createFieldStruct(fieldSchema: IntrospectionField): GqlField {
+    _createFieldStruct(fieldSchema: IntrospectionField): GqlFieldDef {
         return {
             name: fieldSchema.name,
             type: this._extractTypeInformation(fieldSchema.type),

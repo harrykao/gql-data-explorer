@@ -1,4 +1,4 @@
-import useIntrospection, { GqlObject, Introspection } from "./introspection";
+import useIntrospection, { GqlObjectDef, Introspection } from "./introspection";
 
 export class QueryBuilder {
     introspection: Introspection;
@@ -12,14 +12,14 @@ export class QueryBuilder {
      * (meaning that they either don't accept arguments or all arguments have
      * default values).
      */
-    makeObjectQuery(object: GqlObject): string | null {
+    makeObjectQuery(object: GqlObjectDef): string | null {
         const queryFields = [...object.fields.values()].filter(
             (f) => !f.requiresArguments && !f.type.isList,
         );
         return queryFields.length ? `{ ${queryFields.map((f) => f.name).join(" ")} }` : null;
     }
 
-    makeFullQuery(parentSpecs: string[], target: GqlObject): string | null {
+    makeFullQuery(parentSpecs: string[], target: GqlObjectDef): string | null {
         let query = this.makeObjectQuery(target);
 
         if (!query) {
