@@ -1,4 +1,4 @@
-import useIntrospection, { Introspection, GqlObject } from "./introspection";
+import useIntrospection, { GqlObject, Introspection } from "./introspection";
 
 export class QueryBuilder {
     introspection: Introspection;

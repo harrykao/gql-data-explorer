@@ -1,13 +1,13 @@
 import { gql } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
-import { getIntrospectionQuery } from "graphql";
 import {
+    getIntrospectionQuery,
+    IntrospectionField,
     IntrospectionInputTypeRef,
+    IntrospectionInputValue,
+    IntrospectionObjectType,
     IntrospectionOutputTypeRef,
     IntrospectionQuery,
-    IntrospectionObjectType,
-    IntrospectionField,
-    IntrospectionInputValue,
 } from "graphql";
 
 export interface GqlType {

@@ -1,11 +1,10 @@
 import { gql } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
-import { useParams } from "@tanstack/react-router";
-import { Link } from "@tanstack/react-router";
+import { Link, useParams } from "@tanstack/react-router";
+import { getIntrospectionQuery } from "graphql";
+import React from "react";
 import { GqlObject } from "./introspection";
 import useQueryBuilder from "./queryBuilder";
-import React from "react";
-import { getIntrospectionQuery } from "graphql";
 
 // TODO
 function App() {
