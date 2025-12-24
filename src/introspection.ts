@@ -8,10 +8,12 @@ import {
     IntrospectionObjectType,
     IntrospectionOutputTypeRef,
     IntrospectionQuery,
+    IntrospectionType,
 } from "graphql";
 
 export interface GqlTypeDef {
     name: string;
+    kind: IntrospectionType["kind"];
     isNullable: boolean;
     isList: boolean;
 }
@@ -60,11 +62,12 @@ export class Introspection {
     _extractTypeInformation(
         typeSchema: IntrospectionInputTypeRef | IntrospectionOutputTypeRef,
     ): GqlTypeDef {
-        const typeInfo =
+        const typeInfo: GqlTypeDef =
             typeSchema.kind === "LIST" || typeSchema.kind === "NON_NULL"
                 ? this._extractTypeInformation(typeSchema.ofType)
                 : {
-                      name: "PLACEHOLDER",
+                      name: "", // placeholder
+                      kind: "SCALAR", // placeholder
                       isNullable: true,
                       isList: false,
                   };
@@ -75,6 +78,7 @@ export class Introspection {
             typeInfo.isList = true;
         } else {
             typeInfo.name = typeSchema.name;
+            typeInfo.kind = typeSchema.kind;
         }
 
         return typeInfo;

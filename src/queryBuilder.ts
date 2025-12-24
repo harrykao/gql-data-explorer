@@ -14,7 +14,7 @@ export class QueryBuilder {
      */
     makeObjectQuery(object: GqlObjectDef): string | null {
         const queryFields = [...object.fields.values()].filter(
-            (f) => !f.requiresArguments && !f.type.isList,
+            (f) => !f.requiresArguments && !f.type.isList && !(f.type.kind === "OBJECT"),
         );
         return queryFields.length ? `{ ${queryFields.map((f) => f.name).join(" ")} }` : null;
     }

@@ -11,7 +11,7 @@ export default function GqlList(props: GqlListProps) {
     return (
         <>
             {props.data.map((rowData, i) => (
-                <Row index={i} def={props.def} data={rowData} />
+                <Row key={i} index={i} def={props.def} data={rowData} />
             ))}
         </>
     );
@@ -41,7 +41,11 @@ function Row(props: RowProps) {
             content = <Link to={`/${value.name}`}>{value.name}</Link>;
         }
 
-        columns.push(<span style={{ marginRight: "12px" }}>{content}</span>);
+        columns.push(
+            <span key={key} style={{ marginRight: "12px" }}>
+                {content}
+            </span>,
+        );
     });
 
     return <div key={props.index}>{columns}</div>;
