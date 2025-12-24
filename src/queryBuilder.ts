@@ -1,13 +1,10 @@
-import { gql } from "@apollo/client";
-import { useQuery } from "@apollo/client/react";
-import useIntrospection, {Introspection, GqlObject} from "./introspection"
+import useIntrospection, { Introspection, GqlObject } from "./introspection";
 
 export class QueryBuilder {
-
-    introspection: Introspection
+    introspection: Introspection;
 
     constructor(introspection: Introspection) {
-        this.introspection = introspection
+        this.introspection = introspection;
     }
 
     /**
@@ -16,35 +13,37 @@ export class QueryBuilder {
      * default values).
      */
     makeObjectQuery(object: GqlObject): string | null {
-        const queryFields = [...object.fields.values()].filter(f => !f.requiresArguments && !f.type.isList)
-        return (queryFields.length) ? `{ ${queryFields.map(f => f.name).join(" ")} }` : null
+        const queryFields = [...object.fields.values()].filter(
+            (f) => !f.requiresArguments && !f.type.isList,
+        );
+        return queryFields.length ? `{ ${queryFields.map((f) => f.name).join(" ")} }` : null;
     }
 
     makeFullQuery(parentSpecs: string[], target: GqlObject): string | null {
-
-        let query = this.makeObjectQuery(target)
+        let query = this.makeObjectQuery(target);
 
         if (!query) {
-            return null
+            return null;
         }
 
         while (parentSpecs.length) {
-            const parentSpec = parentSpecs.pop()
-            query = `{ ${parentSpec} ${query} }`
+            const parentSpec = parentSpecs.pop();
+            query = `{ ${parentSpec} ${query} }`;
         }
 
-        return query
+        return query;
     }
 }
 
-
-export default function useQueryBuilder(): {introspection: Introspection | null, queryBuilder: QueryBuilder | null,} {
-
-    const introspection = useIntrospection()
+export default function useQueryBuilder(): {
+    introspection: Introspection | null;
+    queryBuilder: QueryBuilder | null;
+} {
+    const introspection = useIntrospection();
 
     if (!introspection) {
-        return {introspection: null, queryBuilder: null}
+        return { introspection: null, queryBuilder: null };
     }
 
-    return {introspection: introspection, queryBuilder: new QueryBuilder(introspection)}
+    return { introspection: introspection, queryBuilder: new QueryBuilder(introspection) };
 }

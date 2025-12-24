@@ -1,13 +1,13 @@
-import { createRouter, Router } from "@tanstack/react-router";
-import { RouterProvider, createRootRoute, createRoute } from "@tanstack/react-router";
+import { createRouter } from "@tanstack/react-router";
+import { createRootRoute, createRoute } from "@tanstack/react-router";
 import App from "./App";
 
 const rootRoute = createRootRoute();
 
 const rootQueryRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "$",
-  component: App,
+    getParentRoute: () => rootRoute,
+    path: "$",
+    component: App,
 });
 
 const routeTree = rootRoute.addChildren([rootQueryRoute]);
