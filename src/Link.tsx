@@ -7,6 +7,5 @@ interface Props {
 }
 
 export default function Link(props: Props) {
-    console.log(props.pathSpecs);
     return <RouterLink to={`/${props.pathSpecs.join("/")}`}>{props.label}</RouterLink>;
 }

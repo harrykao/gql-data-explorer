@@ -5,47 +5,53 @@ import { getIntrospectionQuery } from "graphql";
 import React from "react";
 import GqlList from "./GqlList";
 import GqlObject from "./GqlObject";
-import { GqlFieldDef, GqlObjectDef } from "./introspection";
+import { GqlObjectDef, Introspection } from "./introspection";
+import { parseUrlPath } from "./pathSpecs";
 import useQueryBuilder from "./queryBuilder";
+
+class PathNotFoundError extends Error {}
+
+function getObjects(
+    introspection: Introspection | null,
+    pathSpecs: string[],
+): { parentObjects: GqlObjectDef[] | null; targetObject: GqlObjectDef | null } {
+    if (!introspection) {
+        return { parentObjects: null, targetObject: null };
+    }
+
+    const parentObjects: GqlObjectDef[] = [];
+    let targetObject = introspection.getRootObject();
+
+    pathSpecs.forEach((spec) => {
+        parentObjects.push(targetObject);
+        const field = targetObject.fields.get(spec);
+        if (field) {
+            targetObject = introspection.getObjectByTypeName(field.type.name);
+        } else {
+            throw new PathNotFoundError();
+        }
+    });
+
+    return { parentObjects, targetObject }; // TODO: is parentObjects used?
+}
 
 function App() {
     const params = useParams({ strict: false });
-    const splat = params._splat;
+    const pathSpecs: string[] = params._splat ? parseUrlPath(params._splat) : [];
+
     const { introspection, queryBuilder } = useQueryBuilder();
 
-    const parentObjects: GqlObjectDef[] = [];
-    const parentSpecs: string[] = [];
-    let field: GqlFieldDef | null = null;
-
-    if (introspection && splat) {
-        // TODO: extend to multiple levels
-        parentObjects.push(introspection?.getRootObject());
-        parentSpecs.push(splat);
-    }
-
-    let targetObject: GqlObjectDef | null = null;
-
-    if (introspection) {
-        if (splat === "") {
-            targetObject = introspection.getRootObject();
-        } else {
-            const parent = parentObjects[parentObjects.length - 1];
-            field = parent.fields.get(splat) || null;
-            if (field) {
-                targetObject = introspection.getObjectByTypeName(field.type.name);
-            }
-        }
-    }
+    const { targetObject } = getObjects(introspection, pathSpecs);
 
     const gqlQueryString =
-        queryBuilder && targetObject ? queryBuilder.makeFullQuery(parentSpecs, targetObject) : null;
+        queryBuilder && targetObject ? queryBuilder.makeFullQuery(pathSpecs, targetObject) : null;
 
     const { data: fullData } = useQuery(
         gqlQueryString ? gql(gqlQueryString) : gql(getIntrospectionQuery()),
         { skip: !gqlQueryString },
     );
 
-    const targetData = fullData ? fullData[splat] : null;
+    const targetData = fullData ? fullData[pathSpecs[pathSpecs.length - 1]] : null; // TODO: generalize
 
     if (!targetObject) {
         return null;
@@ -56,13 +62,7 @@ function App() {
     }
 
     if (targetData && Array.isArray(targetData)) {
-        return (
-            <GqlList
-                def={targetObject}
-                data={targetData}
-                parentPathSpecs={field ? [...parentSpecs, field.name] : parentSpecs}
-            />
-        );
+        return <GqlList def={targetObject} data={targetData} parentPathSpecs={pathSpecs} />;
     } else {
         return <GqlObject def={targetObject} />;
     }

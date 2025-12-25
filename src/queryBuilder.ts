@@ -19,15 +19,16 @@ export class QueryBuilder {
         return queryFields.length ? `{ ${queryFields.map((f) => f.name).join(" ")} }` : null;
     }
 
-    makeFullQuery(parentSpecs: string[], target: GqlObjectDef): string | null {
+    makeFullQuery(parentSpecs: readonly string[], target: GqlObjectDef): string | null {
+        const parentSpecsCopy = [...parentSpecs];
         let query = this.makeObjectQuery(target);
 
         if (!query) {
             return null;
         }
 
-        while (parentSpecs.length) {
-            const parentSpec = parentSpecs.pop();
+        while (parentSpecsCopy.length) {
+            const parentSpec = parentSpecsCopy.pop();
             query = `{ ${parentSpec} ${query} }`;
         }
 
