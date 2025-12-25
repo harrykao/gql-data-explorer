@@ -1,17 +1,24 @@
-import { Link } from "@tanstack/react-router";
 import React from "react";
 import { GqlObjectDef } from "./introspection";
+import Link from "./Link";
 
 interface GqlListProps {
     def: GqlObjectDef;
     data: Record<string, unknown>[];
+    parentPathSpecs: string[];
 }
 
 export default function GqlList(props: GqlListProps) {
     return (
         <>
             {props.data.map((rowData, i) => (
-                <Row key={i} index={i} def={props.def} data={rowData} />
+                <Row
+                    key={i}
+                    index={i}
+                    def={props.def}
+                    data={rowData}
+                    parentPathSpecs={props.parentPathSpecs}
+                />
             ))}
         </>
     );
@@ -21,6 +28,7 @@ interface RowProps {
     index: number;
     def: GqlObjectDef;
     data: Record<string, unknown>;
+    parentPathSpecs: string[];
 }
 
 function Row(props: RowProps) {
@@ -38,7 +46,7 @@ function Row(props: RowProps) {
         } else if (value.requiresArguments) {
             content = <>{key}</>;
         } else {
-            content = <Link to={`/${value.name}`}>{value.name}</Link>;
+            content = <Link pathSpecs={[...props.parentPathSpecs, key]} label={key} />;
         }
 
         columns.push(

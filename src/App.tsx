@@ -5,7 +5,7 @@ import { getIntrospectionQuery } from "graphql";
 import React from "react";
 import GqlList from "./GqlList";
 import GqlObject from "./GqlObject";
-import { GqlObjectDef } from "./introspection";
+import { GqlFieldDef, GqlObjectDef } from "./introspection";
 import useQueryBuilder from "./queryBuilder";
 
 function App() {
@@ -15,6 +15,7 @@ function App() {
 
     const parentObjects: GqlObjectDef[] = [];
     const parentSpecs: string[] = [];
+    let field: GqlFieldDef | null = null;
 
     if (introspection && splat) {
         // TODO: extend to multiple levels
@@ -29,7 +30,7 @@ function App() {
             targetObject = introspection.getRootObject();
         } else {
             const parent = parentObjects[parentObjects.length - 1];
-            const field = parent.fields.get(splat);
+            field = parent.fields.get(splat) || null;
             if (field) {
                 targetObject = introspection.getObjectByTypeName(field.type.name);
             }
@@ -55,7 +56,13 @@ function App() {
     }
 
     if (targetData && Array.isArray(targetData)) {
-        return <GqlList def={targetObject} data={targetData} />;
+        return (
+            <GqlList
+                def={targetObject}
+                data={targetData}
+                parentPathSpecs={field ? [...parentSpecs, field.name] : parentSpecs}
+            />
+        );
     } else {
         return <GqlObject def={targetObject} />;
     }
