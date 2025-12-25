@@ -1,11 +1,12 @@
 import React from "react";
 import { GqlObjectDef } from "./introspection";
 import Link from "./Link";
+import { PathSpec } from "./pathSpecs";
 
 interface GqlListProps {
     def: GqlObjectDef;
-    data: Record<string, unknown>[];
-    parentPathSpecs: string[];
+    data: readonly Record<string, unknown>[];
+    parentPathSpecs: readonly PathSpec[];
 }
 
 export default function GqlList(props: GqlListProps) {
@@ -28,7 +29,7 @@ interface RowProps {
     index: number;
     def: GqlObjectDef;
     data: Record<string, unknown>;
-    parentPathSpecs: string[];
+    parentPathSpecs: readonly PathSpec[];
 }
 
 function Row(props: RowProps) {
@@ -46,7 +47,19 @@ function Row(props: RowProps) {
         } else if (value.requiresArguments) {
             content = <>{key}</>;
         } else {
-            content = <Link pathSpecs={[...props.parentPathSpecs, key]} label={key} />;
+            content = (
+                <Link
+                    pathSpecs={[
+                        ...props.parentPathSpecs.slice(0, -2),
+                        new PathSpec(
+                            props.parentPathSpecs[props.parentPathSpecs.length - 1].fieldName,
+                            props.index,
+                        ),
+                        new PathSpec(key, null),
+                    ]}
+                    label={key}
+                />
+            );
         }
 
         columns.push(

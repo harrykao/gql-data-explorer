@@ -6,7 +6,7 @@ import React from "react";
 import GqlList from "./GqlList";
 import GqlObject from "./GqlObject";
 import { GqlObjectDef, Introspection } from "./introspection";
-import { parseUrlPath } from "./pathSpecs";
+import { PathSpec, parseUrlPath } from "./pathSpecs";
 import useQueryBuilder from "./queryBuilder";
 
 class PathNotFoundError extends Error {}
@@ -15,7 +15,7 @@ class TargetDataNotFoundError extends Error {}
 
 function getObjects(
     introspection: Introspection | null,
-    pathSpecs: string[],
+    pathSpecs: PathSpec[],
 ): { parentObjects: GqlObjectDef[] | null; targetObject: GqlObjectDef | null } {
     if (!introspection) {
         return { parentObjects: null, targetObject: null };
@@ -26,7 +26,7 @@ function getObjects(
 
     pathSpecs.forEach((spec) => {
         parentObjects.push(targetObject);
-        const field = targetObject.fields.get(spec);
+        const field = targetObject.fields.get(spec.fieldName);
         if (field) {
             targetObject = introspection.getObjectByTypeName(field.type.name);
         } else {
@@ -64,7 +64,7 @@ function App() {
     let targetData = fullData;
     pathSpecs.forEach((spec) => {
         if (typeof targetData === "object" && !Array.isArray(targetData) && targetData !== null) {
-            targetData = targetData[spec];
+            targetData = targetData[spec.fieldName];
         } else {
             throw new TargetDataNotFoundError();
         }

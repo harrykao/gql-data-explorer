@@ -1,4 +1,5 @@
 import useIntrospection, { GqlObjectDef, Introspection } from "./introspection";
+import { PathSpec } from "./pathSpecs";
 
 export class QueryBuilder {
     introspection: Introspection;
@@ -19,7 +20,7 @@ export class QueryBuilder {
         return queryFields.length ? `{ ${queryFields.map((f) => f.name).join(" ")} }` : null;
     }
 
-    makeFullQuery(parentSpecs: readonly string[], target: GqlObjectDef): string | null {
+    makeFullQuery(parentSpecs: readonly PathSpec[], target: GqlObjectDef): string | null {
         const parentSpecsCopy = [...parentSpecs];
         let query = this.makeObjectQuery(target);
 
@@ -29,7 +30,7 @@ export class QueryBuilder {
 
         while (parentSpecsCopy.length) {
             const parentSpec = parentSpecsCopy.pop();
-            query = `{ ${parentSpec} ${query} }`;
+            query = `{ ${parentSpec?.fieldName} ${query} }`;
         }
 
         return query;
