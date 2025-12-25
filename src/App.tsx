@@ -11,6 +11,8 @@ import useQueryBuilder from "./queryBuilder";
 
 class PathNotFoundError extends Error {}
 
+class TargetDataNotFoundError extends Error {}
+
 function getObjects(
     introspection: Introspection | null,
     pathSpecs: string[],
@@ -37,7 +39,7 @@ function getObjects(
 
 function App() {
     const params = useParams({ strict: false });
-    const pathSpecs: string[] = params._splat ? parseUrlPath(params._splat) : [];
+    const pathSpecs = params._splat ? parseUrlPath(params._splat) : [];
 
     const { introspection, queryBuilder } = useQueryBuilder();
 
@@ -51,15 +53,22 @@ function App() {
         { skip: !gqlQueryString },
     );
 
-    const targetData = fullData ? fullData[pathSpecs[pathSpecs.length - 1]] : null; // TODO: generalize
-
     if (!targetObject) {
         return null;
     }
 
-    if (gqlQueryString && !targetData) {
+    if (gqlQueryString && !fullData) {
         return null;
     }
+
+    let targetData = fullData;
+    pathSpecs.forEach((spec) => {
+        if (typeof targetData === "object" && !Array.isArray(targetData) && targetData !== null) {
+            targetData = targetData[spec];
+        } else {
+            throw new TargetDataNotFoundError();
+        }
+    });
 
     if (targetData && Array.isArray(targetData)) {
         return <GqlList def={targetObject} data={targetData} parentPathSpecs={pathSpecs} />;
