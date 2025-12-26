@@ -1,5 +1,18 @@
-import useIntrospection, { GqlObjectDef, Introspection } from "./introspection";
+import useIntrospection, { GqlFieldDef, GqlObjectDef, Introspection } from "./introspection";
 import { PathSpec } from "./pathSpecs";
+
+function includeFieldInQuery(field: GqlFieldDef): boolean {
+    if (field.requiresArguments) {
+        return false;
+    }
+    if (field.type.kind === "OBJECT") {
+        return false;
+    }
+    if (field.type.isList && field.type.kind !== "SCALAR") {
+        return false;
+    }
+    return true;
+}
 
 export class QueryBuilder {
     introspection: Introspection;
@@ -14,9 +27,7 @@ export class QueryBuilder {
      * default values).
      */
     makeObjectQuery(object: GqlObjectDef): string | null {
-        const queryFields = [...object.fields.values()].filter(
-            (f) => !f.requiresArguments && !f.type.isList && !(f.type.kind === "OBJECT"),
-        );
+        const queryFields = [...object.fields.values()].filter(includeFieldInQuery);
         return queryFields.length ? `{ ${queryFields.map((f) => f.name).join(" ")} }` : null;
     }
 

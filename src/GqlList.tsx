@@ -45,12 +45,12 @@ function Row(props: RowProps) {
                 </>
             );
         } else if (value.requiresArguments) {
-            content = <>{key}</>;
+            content = <>{key} (requires arguments)</>;
         } else {
             content = (
                 <Link
                     pathSpecs={[
-                        ...props.parentPathSpecs.slice(0, -2),
+                        ...props.parentPathSpecs.slice(0, -1),
                         new PathSpec(
                             props.parentPathSpecs[props.parentPathSpecs.length - 1].fieldName,
                             props.index,

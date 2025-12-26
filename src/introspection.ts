@@ -54,7 +54,7 @@ export class Introspection {
             (t): t is IntrospectionObjectType => t.kind === "OBJECT" && t.name === typeName,
         );
         if (matchingTypes.length === 0) {
-            throw new TypeNotFoundError();
+            throw new TypeNotFoundError(typeName);
         }
         return matchingTypes[0];
     }
@@ -109,6 +109,5 @@ export default function useIntrospection(): Introspection | null {
         return null;
     }
 
-    console.log(data);
     return new Introspection(data);
 }

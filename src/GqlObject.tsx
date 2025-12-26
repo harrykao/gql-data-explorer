@@ -1,25 +1,37 @@
-import { Link } from "@tanstack/react-router";
 import React from "react";
 import { GqlObjectDef } from "./introspection";
+import Link from "./Link";
+import { PathSpec } from "./pathSpecs";
 
 interface Props {
     def: GqlObjectDef;
+    data: Record<string, unknown>;
+    parentPathSpecs: readonly PathSpec[];
 }
 
 export default function GqlObject(props: Props) {
-    return (
-        <>
-            {[...props.def.fields.values()].map((f) => {
-                if (f.requiresArguments) {
-                    return <div key={f.name}>{f.name}</div>;
-                } else {
-                    return (
-                        <div key={f.name}>
-                            <Link to={`/${f.name}`}>{f.name}</Link>
-                        </div>
-                    );
-                }
-            })}
-        </>
-    );
+    const items: React.JSX.Element[] = [];
+
+    props.def.fields.forEach((value, key) => {
+        if (props.data[key] !== undefined) {
+            items.push(
+                <div key={key}>
+                    {key}: {String(props.data[key])}
+                </div>,
+            );
+        } else if (value.requiresArguments) {
+            items.push(<div key={key}>{key} (requires arguments)</div>);
+        } else {
+            items.push(
+                <div key={key}>
+                    <Link
+                        pathSpecs={[...props.parentPathSpecs, new PathSpec(key, null)]}
+                        label={key}
+                    />
+                </div>,
+            );
+        }
+    });
+
+    return items;
 }

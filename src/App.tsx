@@ -68,12 +68,26 @@ function App() {
         } else {
             throw new TargetDataNotFoundError();
         }
+
+        if (spec.arrayIndex !== null) {
+            if (Array.isArray(targetData)) {
+                targetData = targetData[spec.arrayIndex];
+            } else {
+                throw new TargetDataNotFoundError();
+            }
+        }
     });
 
     if (targetData && Array.isArray(targetData)) {
         return <GqlList def={targetObject} data={targetData} parentPathSpecs={pathSpecs} />;
     } else {
-        return <GqlObject def={targetObject} />;
+        return (
+            <GqlObject
+                def={targetObject}
+                data={(targetData || {}) as Record<string, unknown>}
+                parentPathSpecs={pathSpecs}
+            />
+        );
     }
 }
 
