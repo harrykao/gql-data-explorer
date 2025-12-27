@@ -2,7 +2,6 @@ import { gql } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
 import { useParams } from "@tanstack/react-router";
 import { getIntrospectionQuery } from "graphql";
-import React from "react";
 import GqlList from "./GqlList";
 import GqlObject from "./GqlObject";
 import { GqlObjectDef, Introspection } from "./introspection";
@@ -42,7 +41,6 @@ function App() {
     const pathSpecs = params._splat ? parseUrlPath(params._splat) : [];
 
     const { introspection, queryBuilder } = useQueryBuilder();
-
     const { targetObject } = getObjects(introspection, pathSpecs);
 
     const gqlQueryString =
@@ -50,18 +48,15 @@ function App() {
 
     const { data: fullData } = useQuery(
         gqlQueryString ? gql(gqlQueryString) : gql(getIntrospectionQuery()),
-        { skip: !gqlQueryString },
+        { skip: !targetObject },
     );
 
-    if (!targetObject) {
-        return null;
-    }
-
-    if (gqlQueryString && !fullData) {
+    if (!(targetObject && fullData)) {
         return null;
     }
 
     let targetData = fullData;
+
     pathSpecs.forEach((spec) => {
         if (typeof targetData === "object" && !Array.isArray(targetData) && targetData !== null) {
             targetData = targetData[spec.fieldName];

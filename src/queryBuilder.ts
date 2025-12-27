@@ -26,18 +26,14 @@ export class QueryBuilder {
      * (meaning that they either don't accept arguments or all arguments have
      * default values).
      */
-    makeObjectQuery(object: GqlObjectDef): string | null {
+    makeObjectQuery(object: GqlObjectDef): string {
         const queryFields = [...object.fields.values()].filter(includeFieldInQuery);
-        return queryFields.length ? `{ ${queryFields.map((f) => f.name).join(" ")} }` : null;
+        return `{ ${[...queryFields.map((f) => f.name), "__typename"].join(" ")} }`;
     }
 
     makeFullQuery(parentSpecs: readonly PathSpec[], target: GqlObjectDef): string | null {
         const parentSpecsCopy = [...parentSpecs];
         let query = this.makeObjectQuery(target);
-
-        if (!query) {
-            return null;
-        }
 
         while (parentSpecsCopy.length) {
             const parentSpec = parentSpecsCopy.pop();
