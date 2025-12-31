@@ -2,10 +2,11 @@ import React from "react";
 import { GqlObjectDef } from "./introspection";
 import Link from "./Link";
 import { PathSpec } from "./pathSpecs";
+import { GqlObjectType } from "./types";
 
 interface Props {
     def: GqlObjectDef;
-    data: Record<string, unknown>;
+    data: GqlObjectType;
     parentPathSpecs: readonly PathSpec[];
 }
 
