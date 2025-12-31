@@ -8,7 +8,7 @@ import React from "react";
 import { router } from "./router";
 
 const client = new ApolloClient({
-    link: new HttpLink({ uri: "https://countries.trevorblades.com/" }),
+    link: new HttpLink({ uri: import.meta.env.VITE_GQL_URL }),
     cache: new InMemoryCache(),
 });
 
