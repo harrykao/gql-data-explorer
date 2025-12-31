@@ -13,21 +13,26 @@ interface Props {
 export default function GqlObject(props: Props) {
     const items: React.JSX.Element[] = [];
 
+    console.log(props.def);
+
     props.def.fields.forEach((value, key) => {
+        // scalar values
         if (props.data[key] !== undefined) {
             items.push(
                 <div key={key}>
                     {key}: {String(props.data[key])}
                 </div>,
             );
-        } else if (value.requiresArguments) {
-            items.push(<div key={key}>{key} (requires arguments)</div>);
-        } else {
+        }
+
+        // objects
+        else {
             items.push(
                 <div key={key}>
+                    {key}{" "}
                     <Link
                         pathSpecs={[...props.parentPathSpecs, new PathSpec(key, null)]}
-                        label={key}
+                        requiresArguments={value.requiresArguments}
                     />
                 </div>,
             );
