@@ -39,7 +39,7 @@ function getObjects(
 }
 
 function App() {
-    const params = useParams({ strict: false });
+    const params = useParams({ from: "/$" });
     const pathSpecs = params._splat ? parseUrlPath(params._splat) : [];
 
     const { introspection, queryBuilder } = useQueryBuilder();
@@ -60,28 +60,38 @@ function App() {
     let targetData = fullData;
 
     pathSpecs.forEach((spec) => {
-        if (typeof targetData === "object" && !Array.isArray(targetData) && targetData !== null) {
-            targetData = targetData[spec.fieldName];
+        if (typeof targetData === "object" && !Array.isArray(targetData)) {
+            const tmp: unknown = targetData[spec.fieldName];
+            if (typeof tmp == "object" && tmp !== null) {
+                targetData = tmp;
+            } else {
+                throw new TargetDataNotFoundError();
+            }
         } else {
             throw new TargetDataNotFoundError();
         }
 
         if (spec.arrayIndex !== null) {
             if (Array.isArray(targetData)) {
-                targetData = targetData[spec.arrayIndex];
+                const tmp: unknown = targetData[spec.arrayIndex];
+                if (typeof tmp == "object" && tmp !== null) {
+                    targetData = tmp;
+                } else {
+                    throw new TargetDataNotFoundError();
+                }
             } else {
                 throw new TargetDataNotFoundError();
             }
         }
     });
 
-    if (targetData && Array.isArray(targetData)) {
+    if (Array.isArray(targetData)) {
         return <GqlList def={targetObject} data={targetData} parentPathSpecs={pathSpecs} />;
     } else {
         return (
             <GqlObject
                 def={targetObject}
-                data={(targetData || {}) as GqlObjectType}
+                data={targetData as GqlObjectType}
                 parentPathSpecs={pathSpecs}
             />
         );

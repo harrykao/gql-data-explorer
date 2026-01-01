@@ -34,10 +34,10 @@ export class QueryBuilder {
     makeFullQuery(parentSpecs: readonly PathSpec[], target: GqlObjectDef): string | null {
         const parentSpecsCopy = [...parentSpecs];
         let query = this.makeObjectQuery(target);
+        let parentSpec: PathSpec | undefined;
 
-        while (parentSpecsCopy.length) {
-            const parentSpec = parentSpecsCopy.pop();
-            query = `{ ${parentSpec?.fieldName} ${query} }`;
+        while ((parentSpec = parentSpecsCopy.pop())) {
+            query = `{ ${parentSpec.fieldName} ${query} }`;
         }
 
         return query;

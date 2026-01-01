@@ -9,7 +9,7 @@ export class PathSpec {
 
     toString(): string {
         let str = this.fieldName;
-        str += this.arrayIndex === null ? "" : `[${this.arrayIndex}]`;
+        str += this.arrayIndex === null ? "" : `[${String(this.arrayIndex)}]`;
         return str;
     }
 
