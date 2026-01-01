@@ -3,27 +3,154 @@
  */
 
 import { Link as RouterLink } from "@tanstack/react-router";
-import { CircleArrowRight, SquarePen } from "lucide-react";
-import React from "react";
+import { CircleArrowRight, SquarePen, SquareX } from "lucide-react";
+import React, { useState } from "react";
+import useIntrospection, { GqlArgumentDef, GqlTypeDef } from "./introspection";
 import { PathSpec, makeUrlPath } from "./pathSpecs";
 
 interface Props {
     pathSpecs: readonly PathSpec[];
+    args: readonly GqlArgumentDef[];
     requiresArguments: boolean;
 }
 
 export default function Link(props: Props) {
-    if (props.requiresArguments) {
+    const [showArgs, setShowArgs] = useState(false);
+
+    if (showArgs && props.args.length) {
         return (
-            <span>
-                <SquarePen size={14} style={{ verticalAlign: "middle" }} />
-            </span>
-        );
-    } else {
-        return (
-            <RouterLink to={`/${makeUrlPath(props.pathSpecs)}`} style={{ verticalAlign: "middle" }}>
-                <CircleArrowRight size={14} />
-            </RouterLink>
+            <div style={{ marginLeft: "24px" }}>
+                {props.args.map((arg) => (
+                    <Arg key={arg.name} name={arg.name} type={arg.type} />
+                ))}
+                <div>
+                    <span style={{ verticalAlign: "middle" }}>
+                        <SquareX
+                            size={24}
+                            onClick={() => {
+                                setShowArgs(false);
+                            }}
+                            style={{
+                                marginRight: "4px",
+                                cursor: "pointer",
+                            }}
+                        />
+                    </span>
+                    <RouterLink
+                        to={`/${makeUrlPath(props.pathSpecs)}`}
+                        style={{ verticalAlign: "middle" }}
+                    >
+                        <CircleArrowRight size={24} />
+                    </RouterLink>
+                </div>
+            </div>
         );
     }
+
+    return (
+        <>
+            {props.args.length > 0 && (
+                <span style={{ verticalAlign: "middle" }}>
+                    <SquarePen
+                        size={14}
+                        onClick={() => {
+                            setShowArgs(true);
+                        }}
+                        style={{
+                            marginRight: "4px",
+                            cursor: "pointer",
+                        }}
+                    />
+                </span>
+            )}
+            {!props.requiresArguments && (
+                <RouterLink
+                    to={`/${makeUrlPath(props.pathSpecs)}`}
+                    style={{ verticalAlign: "middle" }}
+                >
+                    <CircleArrowRight size={14} />
+                </RouterLink>
+            )}
+        </>
+    );
+}
+
+interface ArgProps {
+    name: string;
+    type: GqlTypeDef;
+}
+
+function Arg(props: ArgProps) {
+    const introspection = useIntrospection();
+
+    if (!introspection) {
+        return null;
+    }
+
+    if (props.type.kind === "SCALAR") {
+        return <SingleArgInput name={props.name} type={props.type} />;
+        // return props.type.isList ? (
+        //     <ListArgInput name={props.name} type={props.type} />
+        // ) : (
+        //     <SingleArgInput name={props.name} type={props.type} />
+        // );
+    }
+
+    // if it's not a SCALAR, it's an INPUT_OBJECT
+    else {
+        const inputObject = introspection.getInputObjectByTypeName(props.type.name);
+        const rows: React.JSX.Element[] = [];
+        inputObject.inputFields.forEach((field, name) => {
+            rows.push(<Arg key={name} name={name} type={field.type} />);
+        });
+        return (
+            <div>
+                {props.name}
+                {props.type.isNullable ? "" : ", required"}:
+                <div style={{ marginLeft: "24px" }}>{rows}</div>
+            </div>
+        );
+    }
+}
+
+interface SingleArgInputProps {
+    name: string;
+    type: GqlTypeDef;
+}
+
+function SingleArgInput(props: SingleArgInputProps) {
+    return (
+        <div style={{ margin: "4px 0" }}>
+            {props.name}: <input />{" "}
+            <span style={{ color: "gray", fontStyle: "italic" }}>({makeTypeHint(props.type)})</span>
+        </div>
+    );
+}
+
+// interface ListArgInputProps {
+//     name: string;
+//     type: GqlTypeDef;
+// }
+
+// function ListArgInput(props: ListArgInputProps) {
+//     console.log(props.type);
+//     return (
+//         <div style={{ margin: "4px 0" }}>
+//             {props.name}:<div style={{ marginLeft: "24px" }}>items go here</div>
+//         </div>
+//     );
+// }
+
+function makeTypeHint(type: GqlTypeDef): string {
+    let hint = type.name;
+    if (!type.isNullable) {
+        hint = `${hint}!`;
+    }
+    if (type.isList) {
+        hint = `[${hint}]`;
+    }
+    if (!type.isListNullable) {
+        hint = `${hint}!`;
+    }
+    return hint;
 }

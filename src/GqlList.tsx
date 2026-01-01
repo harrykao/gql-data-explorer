@@ -59,13 +59,13 @@ interface RowProps {
 function Row(props: RowProps) {
     const columns: React.JSX.Element[] = [];
 
-    props.def.fields.forEach((value, key) => {
+    props.def.fields.forEach((field, name) => {
         let content: React.JSX.Element | null = null;
 
-        if (props.data[key] !== undefined) {
-            content = <>{String(props.data[key])}</>;
-        } else if (value.requiresArguments) {
-            content = <>{key} (requires arguments)</>;
+        if (props.data[name] !== undefined) {
+            content = <>{String(props.data[name])}</>;
+        } else if (field.requiresArguments) {
+            content = <>{name} (requires arguments)</>;
         } else {
             content = (
                 <Link
@@ -75,15 +75,16 @@ function Row(props: RowProps) {
                             props.parentPathSpecs[props.parentPathSpecs.length - 1].fieldName,
                             props.index,
                         ),
-                        new PathSpec(key, null),
+                        new PathSpec(name, null),
                     ]}
-                    label={key}
+                    args={field.args}
+                    requiresArguments={field.requiresArguments}
                 />
             );
         }
 
         columns.push(
-            <td key={key} style={{ verticalAlign: "top" }}>
+            <td key={name} style={{ verticalAlign: "top" }}>
                 {content}
             </td>,
         );
