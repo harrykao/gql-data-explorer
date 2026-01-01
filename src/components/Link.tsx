@@ -37,7 +37,10 @@ export default function Link(props: Props) {
                         />
                     </span>
                     <RouterLink
-                        to={`/${makeUrlPath(props.pathSpecs)}`}
+                        to="/$"
+                        params={{
+                            _splat: makeUrlPath(props.pathSpecs),
+                        }}
                         style={{ verticalAlign: "middle" }}
                     >
                         <CircleArrowRight size={24} />
@@ -65,7 +68,10 @@ export default function Link(props: Props) {
             )}
             {!props.requiresArguments && (
                 <RouterLink
-                    to={`/${makeUrlPath(props.pathSpecs)}`}
+                    to="/$"
+                    params={{
+                        _splat: makeUrlPath(props.pathSpecs),
+                    }}
                     style={{ verticalAlign: "middle" }}
                 >
                     <CircleArrowRight size={14} />
