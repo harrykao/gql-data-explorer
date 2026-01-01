@@ -5,8 +5,8 @@
 import { Link as RouterLink } from "@tanstack/react-router";
 import { CircleArrowRight, SquarePen, SquareX } from "lucide-react";
 import React, { useState } from "react";
-import useIntrospection, { GqlArgumentDef, GqlTypeDef } from "./introspection";
-import { PathSpec, makeUrlPath } from "./pathSpecs";
+import useIntrospection, { GqlArgumentDef, GqlTypeDef } from "../introspection";
+import { PathSpec, makeUrlPath } from "../pathSpecs";
 
 interface Props {
     pathSpecs: readonly PathSpec[];

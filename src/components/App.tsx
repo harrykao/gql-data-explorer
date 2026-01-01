@@ -3,12 +3,12 @@ import { useQuery } from "@apollo/client/react";
 import { useParams } from "@tanstack/react-router";
 import { getIntrospectionQuery } from "graphql";
 import React from "react";
+import { GqlObjectDef, Introspection } from "../introspection";
+import { PathSpec, parseUrlPath } from "../pathSpecs";
+import useQueryBuilder from "../queryBuilder";
+import { GqlObjectType } from "../types";
 import GqlList from "./GqlList";
 import GqlObject from "./GqlObject";
-import { GqlObjectDef, Introspection } from "./introspection";
-import { PathSpec, parseUrlPath } from "./pathSpecs";
-import useQueryBuilder from "./queryBuilder";
-import { GqlObjectType } from "./types";
 
 class PathNotFoundError extends Error {}
 

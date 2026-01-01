@@ -1,8 +1,8 @@
 import React from "react";
-import { GqlObjectDef } from "./introspection";
+import { GqlObjectDef } from "../introspection";
+import { PathSpec } from "../pathSpecs";
+import { GqlObjectType } from "../types";
 import Link from "./Link";
-import { PathSpec } from "./pathSpecs";
-import { GqlObjectType } from "./types";
 
 interface GqlListProps {
     def: GqlObjectDef;
