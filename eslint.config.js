@@ -35,7 +35,6 @@ export default defineConfig([
         },
         rules: {
             "@typescript-eslint/switch-exhaustiveness-check": "error",
-            "no-unused-vars": ["error", { varsIgnorePattern: "^[A-Z_]" }],
             "prettier/prettier": "error",
         },
     },

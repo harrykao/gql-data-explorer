@@ -7,6 +7,7 @@ import { CircleArrowRight, SquarePen, SquareX } from "lucide-react";
 import React, { useState } from "react";
 import useIntrospection, { GqlArgumentDef, GqlTypeDef } from "../introspection";
 import { PathSpec, makeUrlPath } from "../pathSpecs";
+import { NonNullableSingleArgInput } from "./Form";
 
 interface Props {
     pathSpecs: readonly PathSpec[];
@@ -94,7 +95,16 @@ function Arg(props: ArgProps) {
     }
 
     if (props.type.kind === "SCALAR") {
-        return <SingleArgInput name={props.name} type={props.type} />;
+        // TODO: handle nullable args
+        return (
+            <NonNullableSingleArgInput
+                name={props.name}
+                typeName={props.type.name}
+                onChange={() => {
+                    console.log();
+                }}
+            />
+        );
         // return props.type.isList ? (
         //     <ListArgInput name={props.name} type={props.type} />
         // ) : (
@@ -117,46 +127,4 @@ function Arg(props: ArgProps) {
             </div>
         );
     }
-}
-
-interface SingleArgInputProps {
-    name: string;
-    type: GqlTypeDef;
-}
-
-function SingleArgInput(props: SingleArgInputProps) {
-    return (
-        <div style={{ margin: "4px 0" }}>
-            {props.name}: <input />{" "}
-            <span style={{ color: "gray", fontStyle: "italic" }}>({makeTypeHint(props.type)})</span>
-        </div>
-    );
-}
-
-// interface ListArgInputProps {
-//     name: string;
-//     type: GqlTypeDef;
-// }
-
-// function ListArgInput(props: ListArgInputProps) {
-//     console.log(props.type);
-//     return (
-//         <div style={{ margin: "4px 0" }}>
-//             {props.name}:<div style={{ marginLeft: "24px" }}>items go here</div>
-//         </div>
-//     );
-// }
-
-function makeTypeHint(type: GqlTypeDef): string {
-    let hint = type.name;
-    if (!type.isNullable) {
-        hint = `${hint}!`;
-    }
-    if (type.isList) {
-        hint = `[${hint}]`;
-    }
-    if (!type.isListNullable) {
-        hint = `${hint}!`;
-    }
-    return hint;
 }
