@@ -3,6 +3,7 @@ import {
     IntrospectionNonNullTypeRef,
     IntrospectionScalarType,
 } from "graphql";
+import { describe, expect, it } from "vitest";
 import { GqlTypeDef, extractTypeInformation } from "./introspection";
 
 describe("extractTypeInformation", () => {
