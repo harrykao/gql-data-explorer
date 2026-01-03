@@ -20,7 +20,7 @@ export function NullableSingleArgInput(props: NullableSingleArgInputProps) {
             <input
                 type="checkbox"
                 checked={!isNull}
-                style={{ marginRight: "8px" }}
+                style={{ marginRight: "8px", verticalAlign: "middle" }}
                 onChange={(e) => {
                     setIsNull(!e.target.checked);
                 }}

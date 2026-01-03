@@ -7,7 +7,7 @@ import { CircleArrowRight, SquarePen, SquareX } from "lucide-react";
 import React, { useState } from "react";
 import useIntrospection, { GqlArgumentDef, GqlTypeDef } from "../introspection";
 import { PathSpec, makeUrlPath } from "../pathSpecs";
-import { NonNullableSingleArgInput } from "./Form";
+import { NonNullableSingleArgInput, NullableSingleArgInput } from "./Form";
 
 interface Props {
     pathSpecs: readonly PathSpec[];
@@ -95,16 +95,27 @@ function Arg(props: ArgProps) {
     }
 
     if (props.type.kind === "SCALAR") {
-        // TODO: handle nullable args
-        return (
-            <NonNullableSingleArgInput
-                name={props.name}
-                typeName={props.type.name}
-                onChange={() => {
-                    console.log();
-                }}
-            />
-        );
+        if (props.type.isNullable) {
+            return (
+                <NullableSingleArgInput
+                    name={props.name}
+                    typeName={props.type.name}
+                    onChange={(value: string | null) => {
+                        console.log(value);
+                    }}
+                />
+            );
+        } else {
+            return (
+                <NonNullableSingleArgInput
+                    name={props.name}
+                    typeName={props.type.name}
+                    onChange={(value: string) => {
+                        console.log(value);
+                    }}
+                />
+            );
+        }
         // return props.type.isList ? (
         //     <ListArgInput name={props.name} type={props.type} />
         // ) : (
