@@ -1,10 +1,58 @@
+import { SquarePlus, SquareX } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import useIntrospection, { GqlTypeDef } from "../introspection";
+
+interface InlineScalarInputProps {
+    name: string;
+    typeName: string;
+    disabled: boolean;
+    onChange: (value: string) => unknown;
+    onRemove?: () => unknown;
+}
+
+export function InlineScalarInput(props: InlineScalarInputProps) {
+    const { onChange } = props;
+    const [value, setValue] = useState("");
+
+    useEffect(() => {
+        onChange(value);
+    }, [onChange, value]);
+
+    return (
+        <>
+            <label>
+                {props.name}:{" "}
+                <input
+                    value={value}
+                    disabled={props.disabled}
+                    onChange={(e) => {
+                        setValue(e.target.value);
+                    }}
+                />
+            </label>{" "}
+            <span style={{ color: "gray", fontStyle: "italic" }}>({props.typeName})</span>
+            {props.onRemove && (
+                <span style={{ marginLeft: "8px", verticalAlign: "middle" }}>
+                    <SquareX
+                        size={16}
+                        onClick={props.onRemove}
+                        aria-label={`remove item ${props.name}`}
+                        style={{
+                            marginRight: "4px",
+                            cursor: "pointer",
+                        }}
+                    />
+                </span>
+            )}
+        </>
+    );
+}
 
 interface NullableScalarInputProps {
     name: string;
     typeName: string;
     onChange: (value: string | null) => unknown;
+    onRemove?: () => unknown;
 }
 
 export function NullableScalarInput(props: NullableScalarInputProps) {
@@ -26,17 +74,13 @@ export function NullableScalarInput(props: NullableScalarInputProps) {
                     setIsNull(!e.target.checked);
                 }}
             />
-            <label>
-                {props.name}:{" "}
-                <input
-                    value={value}
-                    disabled={isNull}
-                    onChange={(e) => {
-                        setValue(e.target.value);
-                    }}
-                />
-            </label>{" "}
-            <span style={{ color: "gray", fontStyle: "italic" }}>({props.typeName})</span>
+            <InlineScalarInput
+                name={props.name}
+                typeName={props.typeName}
+                disabled={isNull}
+                onChange={setValue}
+                onRemove={props.onRemove}
+            />
         </div>
     );
 }
@@ -45,29 +89,83 @@ interface NonNullableScalarInputProps {
     name: string;
     typeName: string;
     onChange: (value: string) => unknown;
+    onRemove?: () => unknown;
 }
 
 export function NonNullableScalarInput(props: NonNullableScalarInputProps) {
-    const { onChange } = props;
-    const [value, setValue] = useState("");
-
-    useEffect(() => {
-        onChange(value);
-    }, [onChange, value]);
-
     return (
         <div style={{ margin: "4px 0" }}>
-            <label>
-                {props.name}:{" "}
-                <input
-                    value={value}
-                    onChange={(e) => {
-                        setValue(e.target.value);
-                    }}
-                />
-            </label>{" "}
-            <span style={{ color: "gray", fontStyle: "italic" }}>({props.typeName}!)</span>
+            <InlineScalarInput
+                name={props.name}
+                typeName={props.typeName}
+                disabled={false}
+                onChange={props.onChange}
+                onRemove={props.onRemove}
+            />
         </div>
+    );
+}
+
+interface ListInputProps {
+    name: string;
+    type: GqlTypeDef;
+    onChange: (value: unknown[]) => unknown;
+}
+
+function ListInput(props: ListInputProps) {
+    const { onChange } = props;
+    const [rowIds, setRowIds] = useState<string[]>([]);
+    const [values, setValues] = useState<unknown[]>([]);
+
+    useEffect(() => {
+        onChange(values);
+    }, [onChange, values]);
+
+    return (
+        <>
+            <div>{props.name}:</div>
+            <div style={{ marginLeft: "24px" }}>
+                {rowIds.map((id, i) => (
+                    <Input
+                        key={id}
+                        name={String(i + 1)}
+                        type={{ ...props.type, isList: false }}
+                        onChange={(itemValue) => {
+                            if (values[i] !== itemValue) {
+                                setValues((oldArray) => [
+                                    ...oldArray.slice(0, i),
+                                    itemValue,
+                                    ...oldArray.slice(i + 1),
+                                ]);
+                            }
+                        }}
+                        onRemove={() => {
+                            setRowIds((oldRowIds) => [
+                                ...oldRowIds.slice(0, i),
+                                ...oldRowIds.slice(i + 1),
+                            ]);
+                            setValues((oldArray) => [
+                                ...oldArray.slice(0, i),
+                                ...oldArray.slice(i + 1),
+                            ]);
+                        }}
+                    />
+                ))}
+                <div>
+                    <SquarePlus
+                        size={16}
+                        onClick={() => {
+                            setRowIds((oldRowIds) => [...oldRowIds, crypto.randomUUID()]);
+                        }}
+                        aria-label="add item"
+                        style={{
+                            marginRight: "4px",
+                            cursor: "pointer",
+                        }}
+                    />
+                </div>
+            </div>
+        </>
     );
 }
 
@@ -75,6 +173,7 @@ interface InputProps {
     name: string;
     type: GqlTypeDef;
     onChange: (value: unknown) => unknown;
+    onRemove?: () => unknown;
 }
 
 export function Input(props: InputProps) {
@@ -84,8 +183,9 @@ export function Input(props: InputProps) {
         return null;
     }
 
+    // list
     if (props.type.isList) {
-        //
+        return <ListInput name={props.name} type={props.type} onChange={props.onChange} />;
     }
 
     // SCALAR
@@ -96,6 +196,7 @@ export function Input(props: InputProps) {
                     name={props.name}
                     typeName={props.type.name}
                     onChange={props.onChange}
+                    onRemove={props.onRemove}
                 />
             );
         } else {
@@ -104,6 +205,7 @@ export function Input(props: InputProps) {
                     name={props.name}
                     typeName={props.type.name}
                     onChange={props.onChange}
+                    onRemove={props.onRemove}
                 />
             );
         }
