@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
+import useIntrospection, { GqlTypeDef } from "../introspection";
 
-interface NullableSingleArgInputProps {
+interface NullableScalarInputProps {
     name: string;
     typeName: string;
     onChange: (value: string | null) => unknown;
 }
 
-export function NullableSingleArgInput(props: NullableSingleArgInputProps) {
+export function NullableScalarInput(props: NullableScalarInputProps) {
     const { onChange } = props;
     const [isNull, setIsNull] = useState(true);
     const [value, setValue] = useState("");
@@ -40,13 +41,13 @@ export function NullableSingleArgInput(props: NullableSingleArgInputProps) {
     );
 }
 
-interface NonNullableSingleArgInputProps {
+interface NonNullableScalarInputProps {
     name: string;
     typeName: string;
     onChange: (value: string) => unknown;
 }
 
-export function NonNullableSingleArgInput(props: NonNullableSingleArgInputProps) {
+export function NonNullableScalarInput(props: NonNullableScalarInputProps) {
     const { onChange } = props;
     const [value, setValue] = useState("");
 
@@ -68,6 +69,66 @@ export function NonNullableSingleArgInput(props: NonNullableSingleArgInputProps)
             <span style={{ color: "gray", fontStyle: "italic" }}>({props.typeName}!)</span>
         </div>
     );
+}
+
+interface InputProps {
+    name: string;
+    type: GqlTypeDef;
+    onChange: (value: unknown) => unknown;
+}
+
+export function Input(props: InputProps) {
+    const introspection = useIntrospection();
+
+    if (!introspection) {
+        return null;
+    }
+
+    if (props.type.isList) {
+        //
+    }
+
+    // SCALAR
+    else if (props.type.kind === "SCALAR") {
+        if (props.type.isNullable) {
+            return (
+                <NullableScalarInput
+                    name={props.name}
+                    typeName={props.type.name}
+                    onChange={props.onChange}
+                />
+            );
+        } else {
+            return (
+                <NonNullableScalarInput
+                    name={props.name}
+                    typeName={props.type.name}
+                    onChange={props.onChange}
+                />
+            );
+        }
+    }
+
+    // INPUT_OBJECT
+    else if (props.type.kind === "INPUT_OBJECT") {
+        const inputObject = introspection.getInputObjectByTypeName(props.type.name);
+        const rows: React.JSX.Element[] = [];
+        inputObject.inputFields.forEach((field, name) => {
+            rows.push(<Input key={name} name={name} type={field.type} onChange={props.onChange} />);
+        });
+        return (
+            <div>
+                {props.name}
+                {props.type.isNullable ? "" : ", required"}:
+                <div style={{ marginLeft: "24px" }}>{rows}</div>
+            </div>
+        );
+    }
+
+    // unexpected type
+    else {
+        return <>type {props.type.kind} not handled</>;
+    }
 }
 
 // interface ListArgInputProps {

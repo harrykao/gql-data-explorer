@@ -1,29 +1,34 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, within } from "storybook/test";
-import { NullableSingleArgInput } from "./Form";
+import { Input } from "./Form";
 
 const meta = {
-    title: "Arguments/Nullable Single Arg Input",
-    component: NullableSingleArgInput,
+    title: "Arguments/Input",
+    component: Input,
     parameters: { layout: "centered" },
     tags: ["autodocs"],
     args: { onChange: fn() },
-} satisfies Meta<typeof NullableSingleArgInput>;
+} satisfies Meta<typeof Input>;
 
 export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {
+export const NullableScalar: Story = {
     args: {
         name: "FieldName",
-        typeName: "TypeName",
+        type: {
+            name: "TypeName",
+            kind: "SCALAR",
+            isNullable: true,
+            isList: false,
+            isListNullable: true,
+        },
     },
     play: async ({ args, canvasElement, userEvent }) => {
         const canvas = within(canvasElement);
 
-        const hint = canvas.getByText("(TypeName)");
-        await expect(hint).toBeInTheDocument();
+        await expect(await canvas.findByText("(TypeName)")).toBeInTheDocument();
 
         // initial state: unchecked and field is disabled
         await expect(canvas.getByRole("checkbox")).not.toBeChecked();
@@ -43,5 +48,26 @@ export const Default: Story = {
         // disable the input
         await userEvent.click(canvas.getByRole("checkbox"));
         await expect(args.onChange).toHaveBeenLastCalledWith(null);
+    },
+};
+
+export const NonNullableScalar: Story = {
+    args: {
+        name: "FieldName",
+        type: {
+            name: "TypeName",
+            kind: "SCALAR",
+            isNullable: false,
+            isList: false,
+            isListNullable: true,
+        },
+    },
+    play: async ({ args, canvasElement, userEvent }) => {
+        const canvas = within(canvasElement);
+
+        await expect(await canvas.findByText("(TypeName!)")).toBeInTheDocument();
+
+        await userEvent.type(canvas.getByLabelText("FieldName:"), "abcd");
+        await expect(args.onChange).toHaveBeenLastCalledWith("abcd");
     },
 };

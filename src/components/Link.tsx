@@ -5,9 +5,9 @@
 import { Link as RouterLink } from "@tanstack/react-router";
 import { CircleArrowRight, SquarePen, SquareX } from "lucide-react";
 import React, { useState } from "react";
-import useIntrospection, { GqlArgumentDef, GqlTypeDef } from "../introspection";
+import { GqlArgumentDef } from "../introspection";
 import { PathSpec, makeUrlPath } from "../pathSpecs";
-import { NonNullableSingleArgInput, NullableSingleArgInput } from "./Form";
+import { Input } from "./Form";
 
 interface Props {
     pathSpecs: readonly PathSpec[];
@@ -22,7 +22,14 @@ export default function Link(props: Props) {
         return (
             <div style={{ marginLeft: "24px" }}>
                 {props.args.map((arg) => (
-                    <Arg key={arg.name} name={arg.name} type={arg.type} />
+                    <Input
+                        key={arg.name}
+                        name={arg.name}
+                        type={arg.type}
+                        onChange={() => {
+                            console.log();
+                        }}
+                    />
                 ))}
                 <div>
                     <span style={{ verticalAlign: "middle" }}>
@@ -80,62 +87,4 @@ export default function Link(props: Props) {
             )}
         </>
     );
-}
-
-interface ArgProps {
-    name: string;
-    type: GqlTypeDef;
-}
-
-function Arg(props: ArgProps) {
-    const introspection = useIntrospection();
-
-    if (!introspection) {
-        return null;
-    }
-
-    if (props.type.kind === "SCALAR") {
-        if (props.type.isNullable) {
-            return (
-                <NullableSingleArgInput
-                    name={props.name}
-                    typeName={props.type.name}
-                    onChange={(value: string | null) => {
-                        console.log(value);
-                    }}
-                />
-            );
-        } else {
-            return (
-                <NonNullableSingleArgInput
-                    name={props.name}
-                    typeName={props.type.name}
-                    onChange={(value: string) => {
-                        console.log(value);
-                    }}
-                />
-            );
-        }
-        // return props.type.isList ? (
-        //     <ListArgInput name={props.name} type={props.type} />
-        // ) : (
-        //     <SingleArgInput name={props.name} type={props.type} />
-        // );
-    }
-
-    // if it's not a SCALAR, it's an INPUT_OBJECT
-    else {
-        const inputObject = introspection.getInputObjectByTypeName(props.type.name);
-        const rows: React.JSX.Element[] = [];
-        inputObject.inputFields.forEach((field, name) => {
-            rows.push(<Arg key={name} name={name} type={field.type} />);
-        });
-        return (
-            <div>
-                {props.name}
-                {props.type.isNullable ? "" : ", required"}:
-                <div style={{ marginLeft: "24px" }}>{rows}</div>
-            </div>
-        );
-    }
 }
