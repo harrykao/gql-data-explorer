@@ -51,6 +51,7 @@ export function InlineScalarInput(props: InlineScalarInputProps) {
 interface NullableScalarInputProps {
     name: string;
     typeName: string;
+    disabled: boolean;
     onChange: (value: string | null) => unknown;
     onRemove?: () => unknown;
 }
@@ -69,6 +70,7 @@ export function NullableScalarInput(props: NullableScalarInputProps) {
             <input
                 type="checkbox"
                 checked={!isNull}
+                aria-label={isNull ? "set non-null" : "set null"}
                 style={{ marginRight: "8px", verticalAlign: "middle" }}
                 onChange={(e) => {
                     setIsNull(!e.target.checked);
@@ -77,7 +79,7 @@ export function NullableScalarInput(props: NullableScalarInputProps) {
             <InlineScalarInput
                 name={props.name}
                 typeName={props.typeName}
-                disabled={isNull}
+                disabled={props.disabled || isNull}
                 onChange={setValue}
                 onRemove={props.onRemove}
             />
@@ -88,6 +90,7 @@ export function NullableScalarInput(props: NullableScalarInputProps) {
 interface NonNullableScalarInputProps {
     name: string;
     typeName: string;
+    disabled: boolean;
     onChange: (value: string) => unknown;
     onRemove?: () => unknown;
 }
@@ -98,7 +101,7 @@ export function NonNullableScalarInput(props: NonNullableScalarInputProps) {
             <InlineScalarInput
                 name={props.name}
                 typeName={props.typeName}
-                disabled={false}
+                disabled={props.disabled}
                 onChange={props.onChange}
                 onRemove={props.onRemove}
             />
@@ -106,13 +109,13 @@ export function NonNullableScalarInput(props: NonNullableScalarInputProps) {
     );
 }
 
-interface ListInputProps {
-    name: string;
+interface ListItemsInputProps {
     type: GqlTypeDef;
+    disabled: boolean;
     onChange: (value: unknown[]) => unknown;
 }
 
-function ListInput(props: ListInputProps) {
+function ListItemsInput(props: ListItemsInputProps) {
     const { onChange } = props;
     const [rowIds, setRowIds] = useState<string[]>([]);
     const [values, setValues] = useState<unknown[]>([]);
@@ -123,13 +126,13 @@ function ListInput(props: ListInputProps) {
 
     return (
         <>
-            <div>{props.name}:</div>
             <div style={{ marginLeft: "24px" }}>
                 {rowIds.map((id, i) => (
                     <Input
                         key={id}
                         name={String(i + 1)}
                         type={{ ...props.type, isList: false }}
+                        disabled={props.disabled}
                         onChange={(itemValue) => {
                             if (values[i] !== itemValue) {
                                 setValues((oldArray) => [
@@ -169,9 +172,65 @@ function ListInput(props: ListInputProps) {
     );
 }
 
+interface NullableListInputProps {
+    name: string;
+    type: GqlTypeDef;
+    disabled: boolean;
+    onChange: (value: unknown[] | null) => unknown;
+}
+
+function NullableListInput(props: NullableListInputProps) {
+    const { onChange } = props;
+    const [isNull, setIsNull] = useState(true);
+    const [value, setValue] = useState<unknown[]>([]);
+
+    useEffect(() => {
+        onChange(isNull ? null : value);
+    }, [onChange, value, isNull]);
+
+    return (
+        <>
+            <div style={{ margin: "4px 0", verticalAlign: "middle" }}>
+                <input
+                    type="checkbox"
+                    checked={!isNull}
+                    aria-label={isNull ? "set non-null" : "set null"}
+                    style={{ marginRight: "8px" }}
+                    onChange={(e) => {
+                        setIsNull(!e.target.checked);
+                    }}
+                />
+                {props.name}:
+            </div>
+            <ListItemsInput
+                type={props.type}
+                disabled={props.disabled || isNull}
+                onChange={setValue}
+            />
+        </>
+    );
+}
+
+interface NonNullableListInputProps {
+    name: string;
+    type: GqlTypeDef;
+    disabled: boolean;
+    onChange: (value: unknown[]) => unknown;
+}
+
+function NonNullableListInput(props: NonNullableListInputProps) {
+    return (
+        <>
+            <div>{props.name}:</div>
+            <ListItemsInput type={props.type} disabled={props.disabled} onChange={props.onChange} />
+        </>
+    );
+}
+
 interface InputProps {
     name: string;
     type: GqlTypeDef;
+    disabled: boolean;
     onChange: (value: unknown) => unknown;
     onRemove?: () => unknown;
 }
@@ -185,7 +244,25 @@ export function Input(props: InputProps) {
 
     // list
     if (props.type.isList) {
-        return <ListInput name={props.name} type={props.type} onChange={props.onChange} />;
+        if (props.type.isListNullable) {
+            return (
+                <NullableListInput
+                    name={props.name}
+                    type={props.type}
+                    disabled={props.disabled}
+                    onChange={props.onChange}
+                />
+            );
+        } else {
+            return (
+                <NonNullableListInput
+                    name={props.name}
+                    type={props.type}
+                    disabled={props.disabled}
+                    onChange={props.onChange}
+                />
+            );
+        }
     }
 
     // SCALAR
@@ -195,6 +272,7 @@ export function Input(props: InputProps) {
                 <NullableScalarInput
                     name={props.name}
                     typeName={props.type.name}
+                    disabled={props.disabled}
                     onChange={props.onChange}
                     onRemove={props.onRemove}
                 />
@@ -204,6 +282,7 @@ export function Input(props: InputProps) {
                 <NonNullableScalarInput
                     name={props.name}
                     typeName={props.type.name}
+                    disabled={props.disabled}
                     onChange={props.onChange}
                     onRemove={props.onRemove}
                 />
@@ -216,7 +295,15 @@ export function Input(props: InputProps) {
         const inputObject = introspection.getInputObjectByTypeName(props.type.name);
         const rows: React.JSX.Element[] = [];
         inputObject.inputFields.forEach((field, name) => {
-            rows.push(<Input key={name} name={name} type={field.type} onChange={props.onChange} />);
+            rows.push(
+                <Input
+                    key={name}
+                    name={name}
+                    type={field.type}
+                    disabled={props.disabled}
+                    onChange={props.onChange}
+                />,
+            );
         });
         return (
             <div>
@@ -232,17 +319,3 @@ export function Input(props: InputProps) {
         return <>type {props.type.kind} not handled</>;
     }
 }
-
-// interface ListArgInputProps {
-//     name: string;
-//     type: GqlTypeDef;
-// }
-
-// function ListArgInput(props: ListArgInputProps) {
-//     console.log(props.type);
-//     return (
-//         <div style={{ margin: "4px 0" }}>
-//             {props.name}:<div style={{ marginLeft: "24px" }}>items go here</div>
-//         </div>
-//     );
-// }

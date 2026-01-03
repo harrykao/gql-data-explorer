@@ -7,7 +7,7 @@ const meta = {
     component: Input,
     parameters: { layout: "centered" },
     tags: ["autodocs"],
-    args: { onChange: fn() },
+    args: { disabled: false, onChange: fn() },
 } satisfies Meta<typeof Input>;
 
 export default meta;
@@ -31,13 +31,13 @@ export const NullableScalar: Story = {
         await expect(await canvas.findByText("(TypeName)")).toBeInTheDocument();
 
         // initial state: unchecked and field is disabled
-        await expect(canvas.getByRole("checkbox")).not.toBeChecked();
+        await expect(canvas.getByLabelText("set non-null")).not.toBeChecked();
         await expect(canvas.getByLabelText("FieldName:")).toBeDisabled();
         await expect(args.onChange).toHaveBeenLastCalledWith(null);
 
         // check the box that enables the input
-        await userEvent.click(canvas.getByRole("checkbox"));
-        await expect(canvas.getByRole("checkbox")).toBeChecked();
+        await userEvent.click(canvas.getByLabelText("set non-null"));
+        await expect(canvas.getByLabelText("set null")).toBeChecked();
         await expect(canvas.getByLabelText("FieldName:")).toBeEnabled();
         await expect(args.onChange).toHaveBeenLastCalledWith("");
 
@@ -46,7 +46,7 @@ export const NullableScalar: Story = {
         await expect(args.onChange).toHaveBeenLastCalledWith("abcd");
 
         // disable the input
-        await userEvent.click(canvas.getByRole("checkbox"));
+        await userEvent.click(canvas.getByLabelText("set null"));
         await expect(args.onChange).toHaveBeenLastCalledWith(null);
     },
 };
@@ -72,7 +72,7 @@ export const NonNullableScalar: Story = {
     },
 };
 
-export const List: Story = {
+export const NullableList: Story = {
     args: {
         name: "FieldName",
         type: {
@@ -81,6 +81,40 @@ export const List: Story = {
             isNullable: false,
             isList: true,
             isListNullable: true,
+        },
+    },
+    play: async ({ args, canvasElement, userEvent }) => {
+        const canvas = within(canvasElement);
+
+        await expect(await canvas.findByText("FieldName:")).toBeInTheDocument();
+
+        // initial state: null
+        await expect(canvas.getByLabelText("set non-null")).not.toBeChecked();
+        await expect(args.onChange).toHaveBeenLastCalledWith(null);
+
+        // add an input
+        await userEvent.click(canvas.getByLabelText("add item"));
+        await expect(args.onChange).toHaveBeenLastCalledWith(null);
+
+        // enable
+        await userEvent.click(canvas.getByLabelText("set non-null"));
+        await expect(args.onChange).toHaveBeenLastCalledWith([""]);
+
+        // disble
+        await userEvent.click(canvas.getByLabelText("set null"));
+        await expect(args.onChange).toHaveBeenLastCalledWith(null);
+    },
+};
+
+export const NonNullableList: Story = {
+    args: {
+        name: "FieldName",
+        type: {
+            name: "TypeName",
+            kind: "SCALAR",
+            isNullable: false,
+            isList: true,
+            isListNullable: false,
         },
     },
     play: async ({ args, canvasElement, userEvent }) => {
