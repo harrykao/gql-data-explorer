@@ -22,10 +22,10 @@ export const Default: Story = {
     play: async ({ args, canvasElement, userEvent }) => {
         const canvas = within(canvasElement);
 
-        const hint = canvas.getByText("(TypeName)");
+        const hint = canvas.getByText("(TypeName!)");
         await expect(hint).toBeInTheDocument();
 
         await userEvent.type(canvas.getByLabelText("FieldName:"), "abcd");
-        await expect(args.onChange).toHaveBeenCalledWith("abcd");
+        await expect(args.onChange).toHaveBeenLastCalledWith("abcd");
     },
 };

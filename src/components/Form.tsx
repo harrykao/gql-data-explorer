@@ -1,17 +1,58 @@
 import React, { useEffect, useState } from "react";
 
-interface NonNullableSingleArgInputProps {
+interface NullableSingleArgInputProps {
     name: string;
     typeName: string;
-    onChange: (string) => unknown;
+    onChange: (value: string | null) => unknown;
 }
 
-export function NonNullableSingleArgInput(props: NonNullableSingleArgInputProps) {
+export function NullableSingleArgInput(props: NullableSingleArgInputProps) {
+    const { onChange } = props;
+    const [isNull, setIsNull] = useState(true);
     const [value, setValue] = useState("");
 
     useEffect(() => {
-        props.onChange(value);
-    }, [value]);
+        onChange(isNull ? null : value);
+    }, [onChange, value, isNull]);
+
+    return (
+        <div style={{ margin: "4px 0" }}>
+            <input
+                type="checkbox"
+                checked={!isNull}
+                style={{ marginRight: "8px" }}
+                onChange={(e) => {
+                    setIsNull(!e.target.checked);
+                }}
+            />
+            <label>
+                {props.name}:{" "}
+                <input
+                    value={value}
+                    disabled={isNull}
+                    onChange={(e) => {
+                        setValue(e.target.value);
+                    }}
+                />
+            </label>{" "}
+            <span style={{ color: "gray", fontStyle: "italic" }}>({props.typeName})</span>
+        </div>
+    );
+}
+
+interface NonNullableSingleArgInputProps {
+    name: string;
+    typeName: string;
+    onChange: (value: string) => unknown;
+}
+
+export function NonNullableSingleArgInput(props: NonNullableSingleArgInputProps) {
+    const { onChange } = props;
+    const [value, setValue] = useState("");
+
+    useEffect(() => {
+        onChange(value);
+    }, [onChange, value]);
 
     return (
         <div style={{ margin: "4px 0" }}>
@@ -24,7 +65,7 @@ export function NonNullableSingleArgInput(props: NonNullableSingleArgInputProps)
                     }}
                 />
             </label>{" "}
-            <span style={{ color: "gray", fontStyle: "italic" }}>({props.typeName})</span>
+            <span style={{ color: "gray", fontStyle: "italic" }}>({props.typeName}!)</span>
         </div>
     );
 }
