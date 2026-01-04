@@ -73,9 +73,10 @@ function Row(props: RowProps) {
                         ...props.parentPathSpecs.slice(0, -1),
                         new PathSpec(
                             props.parentPathSpecs[props.parentPathSpecs.length - 1].fieldName,
+                            null,
                             props.index,
                         ),
-                        new PathSpec(name, null),
+                        new PathSpec(name, null, null),
                     ]}
                     args={field.args}
                     requiresArguments={field.requiresArguments}

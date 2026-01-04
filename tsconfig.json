@@ -6,5 +6,5 @@
         "module": "esnext",
         "moduleResolution": "bundler"
     },
-    "include": ["**/*.ts", "**/*.tsx", ".storybook/*.ts", ".storybook/preview.tsx"]
+    "include": ["**/*.ts", "**/*.tsx", ".storybook/*.ts", ".storybook/*.tsx"]
 }

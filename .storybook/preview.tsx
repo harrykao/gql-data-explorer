@@ -5,6 +5,7 @@ import type { Preview } from "@storybook/react-vite";
 import { getIntrospectionQuery } from "graphql";
 import React from "react";
 import introspectionData from "./introspection_data.json";
+import withRouter from "./routerDecorator";
 
 const INTROSPECTION_MOCK: MockLink.MockedResponse = {
     request: {
@@ -38,6 +39,7 @@ const preview: Preview = {
                 <Story />
             </MockedProvider>
         ),
+        withRouter,
     ],
 };
 

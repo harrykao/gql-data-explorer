@@ -17,6 +17,7 @@ interface Props {
 
 export default function Link(props: Props) {
     const [showArgs, setShowArgs] = useState(false);
+    const [argValues, setArgValues] = useState<Record<string, unknown>>({});
 
     if (showArgs && props.args.length) {
         return (
@@ -28,14 +29,19 @@ export default function Link(props: Props) {
                         type={arg.type}
                         disabled={false}
                         onChange={(value) => {
-                            console.log(value);
+                            setArgValues((oldValues) =>
+                                oldValues[arg.name] !== value
+                                    ? { ...oldValues, [arg.name]: value }
+                                    : oldValues,
+                            );
                         }}
                     />
                 ))}
                 <div>
-                    <span style={{ verticalAlign: "middle" }}>
+                    <span role="button" style={{ verticalAlign: "middle" }}>
                         <SquareX
                             size={24}
+                            aria-label="remove arguments"
                             onClick={() => {
                                 setShowArgs(false);
                             }}
@@ -48,8 +54,16 @@ export default function Link(props: Props) {
                     <RouterLink
                         to="/$"
                         params={{
-                            _splat: makeUrlPath(props.pathSpecs),
+                            _splat: makeUrlPath([
+                                ...props.pathSpecs.slice(0, -1),
+                                new PathSpec(
+                                    props.pathSpecs[props.pathSpecs.length - 1].fieldName,
+                                    argValues,
+                                    props.pathSpecs[props.pathSpecs.length - 1].arrayIndex,
+                                ),
+                            ]),
                         }}
+                        aria-label="query field"
                         style={{ verticalAlign: "middle" }}
                     >
                         <CircleArrowRight size={24} />
@@ -62,9 +76,10 @@ export default function Link(props: Props) {
     return (
         <>
             {props.args.length > 0 && (
-                <span style={{ verticalAlign: "middle" }}>
+                <span role="button" style={{ verticalAlign: "middle" }}>
                     <SquarePen
                         size={14}
+                        aria-label="edit arguments"
                         onClick={() => {
                             setShowArgs(true);
                         }}
@@ -81,6 +96,7 @@ export default function Link(props: Props) {
                     params={{
                         _splat: makeUrlPath(props.pathSpecs),
                     }}
+                    aria-label="query field"
                     style={{ verticalAlign: "middle" }}
                 >
                     <CircleArrowRight size={14} />

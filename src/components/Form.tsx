@@ -10,7 +10,7 @@ interface InlineScalarInputProps {
     onRemove?: () => unknown;
 }
 
-export function InlineScalarInput(props: InlineScalarInputProps) {
+function InlineScalarInput(props: InlineScalarInputProps) {
     const { onChange } = props;
     const [value, setValue] = useState("");
 
@@ -56,7 +56,7 @@ interface NullableScalarInputProps {
     onRemove?: () => unknown;
 }
 
-export function NullableScalarInput(props: NullableScalarInputProps) {
+function NullableScalarInput(props: NullableScalarInputProps) {
     const { onChange } = props;
     const [isNull, setIsNull] = useState(true);
     const [value, setValue] = useState("");
@@ -96,7 +96,7 @@ interface NonNullableScalarInputProps {
     onRemove?: () => unknown;
 }
 
-export function NonNullableScalarInput(props: NonNullableScalarInputProps) {
+function NonNullableScalarInput(props: NonNullableScalarInputProps) {
     return (
         <div style={{ margin: "4px 0" }}>
             <InlineScalarInput

@@ -29,7 +29,7 @@ export default function GqlObject(props: Props) {
                 <div key={name}>
                     {name}{" "}
                     <Link
-                        pathSpecs={[...props.parentPathSpecs, new PathSpec(name, null)]}
+                        pathSpecs={[...props.parentPathSpecs, new PathSpec(name, null, null)]}
                         args={field.args}
                         requiresArguments={field.requiresArguments}
                     />

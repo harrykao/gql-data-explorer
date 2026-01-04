@@ -3,7 +3,7 @@ import { expect, fn, within } from "storybook/test";
 import { Input } from "./Form";
 
 const meta = {
-    title: "Arguments/Input",
+    title: "Components/Form",
     component: Input,
     parameters: { layout: "centered" },
     tags: ["autodocs"],
