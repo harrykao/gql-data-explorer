@@ -52,7 +52,6 @@
     "playwright": "^1.57.0",
     "prettier": "^3.7.4",
     "storybook": "^10.1.11",
-    "storybook-addon-apollo-client": "^10.0.0",
     "typescript-eslint": "^8.50.1",
     "vite": "^7.2.4",
     "vitest": "^4.0.16"

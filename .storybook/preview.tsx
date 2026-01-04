@@ -1,7 +1,19 @@
-import { ApolloProvider } from "@apollo/client/react";
+import { gql } from "@apollo/client";
+import { MockLink } from "@apollo/client/testing";
+import { MockedProvider } from "@apollo/client/testing/react";
 import type { Preview } from "@storybook/react-vite";
+import { getIntrospectionQuery } from "graphql";
 import React from "react";
-import { client } from "../src/apollo";
+import introspectionData from "./introspection_data.json";
+
+const INTROSPECTION_MOCK: MockLink.MockedResponse = {
+    request: {
+        query: gql(getIntrospectionQuery()),
+    },
+    result: {
+        data: introspectionData,
+    },
+};
 
 const preview: Preview = {
     parameters: {
@@ -22,9 +34,9 @@ const preview: Preview = {
     tags: ["autodocs"],
     decorators: [
         (Story) => (
-            <ApolloProvider client={client}>
+            <MockedProvider mocks={[INTROSPECTION_MOCK]}>
                 <Story />
-            </ApolloProvider>
+            </MockedProvider>
         ),
     ],
 };

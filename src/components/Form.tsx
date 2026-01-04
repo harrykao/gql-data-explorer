@@ -134,13 +134,11 @@ function ListItemsInput(props: ListItemsInputProps) {
                         type={{ ...props.type, isList: false }}
                         disabled={props.disabled}
                         onChange={(itemValue) => {
-                            if (values[i] !== itemValue) {
-                                setValues((oldArray) => [
-                                    ...oldArray.slice(0, i),
-                                    itemValue,
-                                    ...oldArray.slice(i + 1),
-                                ]);
-                            }
+                            setValues((oldArray) =>
+                                values[i] !== itemValue
+                                    ? [...oldArray.slice(0, i), itemValue, ...oldArray.slice(i + 1)]
+                                    : oldArray,
+                            );
                         }}
                         onRemove={() => {
                             setRowIds((oldRowIds) => [
@@ -227,6 +225,51 @@ function NonNullableListInput(props: NonNullableListInputProps) {
     );
 }
 
+interface NonNullableObjectInputProps {
+    name: string;
+    typeName: string;
+    disabled: boolean;
+    onChange: (value: Record<string, unknown>) => unknown;
+}
+
+function NonNullableObjectInput(props: NonNullableObjectInputProps) {
+    const { onChange } = props;
+    const introspection = useIntrospection();
+    const [value, setValue] = useState<Record<string, unknown>>({});
+
+    useEffect(() => {
+        console.log(value);
+        onChange(value);
+    }, [onChange, value]);
+
+    if (!introspection) {
+        return null;
+    }
+
+    const inputObject = introspection.getInputObjectByTypeName(props.typeName);
+    const rows: React.JSX.Element[] = [];
+    inputObject.inputFields.forEach((field, name) => {
+        rows.push(
+            <Input
+                key={name}
+                name={name}
+                type={field.type}
+                disabled={props.disabled}
+                onChange={(fieldValue) => {
+                    setValue((oldValue) =>
+                        oldValue[name] !== fieldValue ? { ...value, [name]: fieldValue } : oldValue,
+                    );
+                }}
+            />,
+        );
+    });
+    return (
+        <div>
+            {props.name}:<div style={{ marginLeft: "24px" }}>{rows}</div>
+        </div>
+    );
+}
+
 interface InputProps {
     name: string;
     type: GqlTypeDef;
@@ -236,12 +279,6 @@ interface InputProps {
 }
 
 export function Input(props: InputProps) {
-    const introspection = useIntrospection();
-
-    if (!introspection) {
-        return null;
-    }
-
     // list
     if (props.type.isList) {
         if (props.type.isListNullable) {
@@ -292,25 +329,13 @@ export function Input(props: InputProps) {
 
     // INPUT_OBJECT
     else if (props.type.kind === "INPUT_OBJECT") {
-        const inputObject = introspection.getInputObjectByTypeName(props.type.name);
-        const rows: React.JSX.Element[] = [];
-        inputObject.inputFields.forEach((field, name) => {
-            rows.push(
-                <Input
-                    key={name}
-                    name={name}
-                    type={field.type}
-                    disabled={props.disabled}
-                    onChange={props.onChange}
-                />,
-            );
-        });
         return (
-            <div>
-                {props.name}
-                {props.type.isNullable ? "" : ", required"}:
-                <div style={{ marginLeft: "24px" }}>{rows}</div>
-            </div>
+            <NonNullableObjectInput
+                name={props.name}
+                typeName={props.type.name}
+                disabled={props.disabled}
+                onChange={props.onChange}
+            />
         );
     }
 

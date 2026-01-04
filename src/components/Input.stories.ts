@@ -14,7 +14,7 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const NullableScalar: Story = {
+export const ScalarNullable: Story = {
     args: {
         name: "FieldName",
         type: {
@@ -51,7 +51,7 @@ export const NullableScalar: Story = {
     },
 };
 
-export const NonNullableScalar: Story = {
+export const ScalarNonNullable: Story = {
     args: {
         name: "FieldName",
         type: {
@@ -72,7 +72,7 @@ export const NonNullableScalar: Story = {
     },
 };
 
-export const NullableList: Story = {
+export const ListNullable: Story = {
     args: {
         name: "FieldName",
         type: {
@@ -106,7 +106,7 @@ export const NullableList: Story = {
     },
 };
 
-export const NonNullableList: Story = {
+export const ListNonNullable: Story = {
     args: {
         name: "FieldName",
         type: {
@@ -154,5 +154,32 @@ export const NonNullableList: Story = {
         // remove the (current) second
         await userEvent.click(canvas.getByLabelText("remove item 2"));
         await expect(args.onChange).toHaveBeenLastCalledWith(["1"]);
+    },
+};
+
+export const ObjectNonNullable: Story = {
+    args: {
+        name: "FieldName",
+        type: {
+            name: "SimpleInput",
+            kind: "INPUT_OBJECT",
+            isNullable: false,
+            isList: false,
+            isListNullable: false,
+        },
+    },
+    play: async ({ args, canvasElement, userEvent }) => {
+        const canvas = within(canvasElement);
+
+        await expect(await canvas.findByText("FieldName:")).toBeInTheDocument();
+
+        // change string field
+        await userEvent.click(canvas.getAllByRole("checkbox")[0]);
+        await userEvent.type(canvas.getAllByRole("textbox")[0], "foo");
+        await expect(args.onChange).toHaveBeenLastCalledWith({
+            nullableString: "foo",
+            nullableListOfNullableStrings: null,
+            nonNullableListOfNonNullableStrings: [],
+        });
     },
 };
