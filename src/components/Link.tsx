@@ -27,8 +27,8 @@ export default function Link(props: Props) {
                         name={arg.name}
                         type={arg.type}
                         disabled={false}
-                        onChange={() => {
-                            console.log();
+                        onChange={(value) => {
+                            console.log(value);
                         }}
                     />
                 ))}

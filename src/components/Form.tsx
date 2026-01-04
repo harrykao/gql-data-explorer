@@ -70,6 +70,7 @@ export function NullableScalarInput(props: NullableScalarInputProps) {
             <input
                 type="checkbox"
                 checked={!isNull}
+                disabled={props.disabled}
                 aria-label={isNull ? "set non-null" : "set null"}
                 style={{ marginRight: "8px", verticalAlign: "middle" }}
                 onChange={(e) => {
@@ -192,6 +193,7 @@ function NullableListInput(props: NullableListInputProps) {
                 <input
                     type="checkbox"
                     checked={!isNull}
+                    disabled={props.disabled}
                     aria-label={isNull ? "set non-null" : "set null"}
                     style={{ marginRight: "8px" }}
                     onChange={(e) => {
@@ -225,20 +227,19 @@ function NonNullableListInput(props: NonNullableListInputProps) {
     );
 }
 
-interface NonNullableObjectInputProps {
+interface ObjectFieldsInputProps {
     name: string;
     typeName: string;
     disabled: boolean;
     onChange: (value: Record<string, unknown>) => unknown;
 }
 
-function NonNullableObjectInput(props: NonNullableObjectInputProps) {
+function ObjectFieldsInput(props: ObjectFieldsInputProps) {
     const { onChange } = props;
     const introspection = useIntrospection();
     const [value, setValue] = useState<Record<string, unknown>>({});
 
     useEffect(() => {
-        console.log(value);
         onChange(value);
     }, [onChange, value]);
 
@@ -263,9 +264,67 @@ function NonNullableObjectInput(props: NonNullableObjectInputProps) {
             />,
         );
     });
+    return <div style={{ marginLeft: "24px" }}>{rows}</div>;
+}
+
+interface NullableObjectInputProps {
+    name: string;
+    typeName: string;
+    disabled: boolean;
+    onChange: (value: Record<string, unknown> | null) => unknown;
+}
+
+function NullableObjectInput(props: NullableObjectInputProps) {
+    const { onChange } = props;
+    const [isNull, setIsNull] = useState(true);
+    const [value, setValue] = useState<Record<string, unknown>>({});
+
+    useEffect(() => {
+        onChange(isNull ? null : value);
+    }, [onChange, value, isNull]);
+
     return (
         <div>
-            {props.name}:<div style={{ marginLeft: "24px" }}>{rows}</div>
+            <div>
+                <input
+                    type="checkbox"
+                    checked={!isNull}
+                    disabled={props.disabled}
+                    aria-label={isNull ? "set non-null" : "set null"}
+                    style={{ marginRight: "8px" }}
+                    onChange={(e) => {
+                        setIsNull(!e.target.checked);
+                    }}
+                />
+                {props.name}:
+            </div>
+            <ObjectFieldsInput
+                name={props.name}
+                typeName={props.typeName}
+                disabled={props.disabled || isNull}
+                onChange={setValue}
+            />
+        </div>
+    );
+}
+
+interface NonNullableObjectInputProps {
+    name: string;
+    typeName: string;
+    disabled: boolean;
+    onChange: (value: Record<string, unknown>) => unknown;
+}
+
+function NonNullableObjectInput(props: NonNullableObjectInputProps) {
+    return (
+        <div>
+            {props.name}:
+            <ObjectFieldsInput
+                name={props.name}
+                typeName={props.typeName}
+                disabled={props.disabled}
+                onChange={props.onChange}
+            />
         </div>
     );
 }
@@ -329,14 +388,25 @@ export function Input(props: InputProps) {
 
     // INPUT_OBJECT
     else if (props.type.kind === "INPUT_OBJECT") {
-        return (
-            <NonNullableObjectInput
-                name={props.name}
-                typeName={props.type.name}
-                disabled={props.disabled}
-                onChange={props.onChange}
-            />
-        );
+        if (props.type.isNullable) {
+            return (
+                <NullableObjectInput
+                    name={props.name}
+                    typeName={props.type.name}
+                    disabled={props.disabled}
+                    onChange={props.onChange}
+                />
+            );
+        } else {
+            return (
+                <NonNullableObjectInput
+                    name={props.name}
+                    typeName={props.type.name}
+                    disabled={props.disabled}
+                    onChange={props.onChange}
+                />
+            );
+        }
     }
 
     // unexpected type

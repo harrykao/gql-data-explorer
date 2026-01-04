@@ -157,6 +157,33 @@ export const ListNonNullable: Story = {
     },
 };
 
+export const ObjectNullable: Story = {
+    args: {
+        name: "FieldName",
+        type: {
+            name: "SimpleInput",
+            kind: "INPUT_OBJECT",
+            isNullable: true,
+            isList: false,
+            isListNullable: false,
+        },
+    },
+    play: async ({ args, canvasElement, userEvent }) => {
+        const canvas = within(canvasElement);
+
+        await expect(await canvas.findAllByLabelText("add item")).toHaveLength(2);
+        await expect(args.onChange).toHaveBeenLastCalledWith(null);
+
+        // enable
+        await userEvent.click(canvas.getAllByRole("checkbox")[0]);
+        await expect(args.onChange).toHaveBeenLastCalledWith({
+            nullableString: null,
+            nullableListOfNullableStrings: null,
+            nonNullableListOfNonNullableStrings: [],
+        });
+    },
+};
+
 export const ObjectNonNullable: Story = {
     args: {
         name: "FieldName",
@@ -171,7 +198,7 @@ export const ObjectNonNullable: Story = {
     play: async ({ args, canvasElement, userEvent }) => {
         const canvas = within(canvasElement);
 
-        await expect(await canvas.findByText("FieldName:")).toBeInTheDocument();
+        await expect(await canvas.findAllByRole("checkbox")).toHaveLength(2);
 
         // change string field
         await userEvent.click(canvas.getAllByRole("checkbox")[0]);
