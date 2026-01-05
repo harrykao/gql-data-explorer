@@ -45,12 +45,12 @@ function App() {
     const { introspection, queryBuilder } = useQueryBuilder();
     const { targetObject } = getObjects(introspection, pathSpecs);
 
-    const gqlQueryString =
-        queryBuilder && targetObject ? queryBuilder.makeFullQuery(pathSpecs, targetObject) : null;
+    const gqlQueryRequest =
+        queryBuilder && targetObject ? queryBuilder.makeFullQuery(pathSpecs) : null;
 
     const { data: fullData } = useQuery(
-        gqlQueryString ? gql(gqlQueryString) : gql(getIntrospectionQuery()),
-        { skip: !targetObject },
+        gqlQueryRequest ? gql(gqlQueryRequest.queryStr) : gql(getIntrospectionQuery()),
+        { skip: !targetObject, variables: gqlQueryRequest?.vars ?? undefined },
     );
 
     if (!(targetObject && fullData)) {

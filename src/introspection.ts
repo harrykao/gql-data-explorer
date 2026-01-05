@@ -189,6 +189,20 @@ function extractTypeInformationRecursive(
     return [typeDef, wrappedType];
 }
 
+export function makeTypeStrFromDef(type: GqlTypeDef): string {
+    let typeStr = type.name;
+    if (!type.isNullable) {
+        typeStr = `${typeStr}!`;
+    }
+    if (type.isList) {
+        typeStr = `[${typeStr}]`;
+    }
+    if (!type.isListNullable) {
+        typeStr = `${typeStr}!`;
+    }
+    return typeStr;
+}
+
 export default function useIntrospection(): Introspection | null {
     const { data } = useQuery<IntrospectionQuery>(gql(getIntrospectionQuery()));
 

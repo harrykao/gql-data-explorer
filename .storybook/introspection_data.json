@@ -33,6 +33,37 @@
             },
             {
                 "__typename": "__Type",
+                "kind": "OBJECT",
+                "name": "SimpleObject",
+                "description": null,
+                "fields": [
+                    {
+                        "__typename": "__Field",
+                        "name": "stringField",
+                        "description": null,
+                        "args": [],
+                        "type": {
+                            "__typename": "__Type",
+                            "kind": "NON_NULL",
+                            "name": null,
+                            "ofType": {
+                                "__typename": "__Type",
+                                "kind": "SCALAR",
+                                "name": "String",
+                                "ofType": null
+                            }
+                        },
+                        "isDeprecated": false,
+                        "deprecationReason": null
+                    }
+                ],
+                "inputFields": null,
+                "interfaces": [],
+                "enumValues": null,
+                "possibleTypes": null
+            },
+            {
+                "__typename": "__Type",
                 "kind": "INPUT_OBJECT",
                 "name": "SimpleInput",
                 "description": null,
@@ -794,12 +825,12 @@
                 "fields": [
                     {
                         "__typename": "__Field",
-                        "name": "continent",
+                        "name": "rootField",
                         "description": null,
                         "args": [
                             {
                                 "__typename": "__InputValue",
-                                "name": "code",
+                                "name": "foo",
                                 "description": null,
                                 "type": {
                                     "__typename": "__Type",
@@ -813,12 +844,24 @@
                                     }
                                 },
                                 "defaultValue": null
+                            },
+                            {
+                                "__typename": "__InputValue",
+                                "name": "bar",
+                                "description": null,
+                                "type": {
+                                    "__typename": "__Type",
+                                    "kind": "SCALAR",
+                                    "name": "String",
+                                    "ofType": null
+                                },
+                                "defaultValue": null
                             }
                         ],
                         "type": {
                             "__typename": "__Type",
                             "kind": "OBJECT",
-                            "name": "Continent",
+                            "name": "SimpleObject",
                             "ofType": null
                         },
                         "isDeprecated": false,

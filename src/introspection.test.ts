@@ -4,7 +4,7 @@ import {
     IntrospectionScalarType,
 } from "graphql";
 import { describe, expect, it } from "vitest";
-import { GqlTypeDef, extractTypeInformation } from "./introspection";
+import { GqlTypeDef, extractTypeInformation, makeTypeStrFromDef } from "./introspection";
 
 describe("extractTypeInformation", () => {
     it("parses nullable scalar", () => {
@@ -112,5 +112,62 @@ describe("extractTypeInformation", () => {
 
         const typeDef = extractTypeInformation(typeSchema);
         expect(typeDef).toStrictEqual(expected);
+    });
+});
+
+describe("makes GQL type string from definition", () => {
+    it("makes type string for nullable scalar", () => {
+        const str = makeTypeStrFromDef({
+            name: "String",
+            kind: "SCALAR",
+            isNullable: true,
+            isList: false,
+            isListNullable: true,
+        });
+        expect(str).toEqual("String");
+    });
+
+    it("makes type string for non-nullable scalar", () => {
+        const str = makeTypeStrFromDef({
+            name: "String",
+            kind: "SCALAR",
+            isNullable: false,
+            isList: false,
+            isListNullable: true,
+        });
+        expect(str).toEqual("String!");
+    });
+
+    it("makes type string for nullable list of nullable scalars", () => {
+        const str = makeTypeStrFromDef({
+            name: "String",
+            kind: "SCALAR",
+            isNullable: true,
+            isList: true,
+            isListNullable: true,
+        });
+        expect(str).toEqual("[String]");
+    });
+
+    it("makes type string for non-nullable list of nullable scalars", () => {
+        const str = makeTypeStrFromDef({
+            name: "String",
+            kind: "SCALAR",
+            isNullable: true,
+            isList: true,
+            isListNullable: false,
+        });
+        expect(str).toEqual("[String]!");
+    });
+
+    it("makes type string for non-nullable list of non-nullable scalars", () => {
+        const str = makeTypeStrFromDef({
+            name: "String",
+            kind: "SCALAR",
+            isNullable: false,
+            isList: true,
+            isListNullable: false,
+        });
+        expect(str).toEqual("[String!]!");
     });
 });
