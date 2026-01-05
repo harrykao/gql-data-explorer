@@ -1,6 +1,66 @@
-import { SquarePlus, SquareX } from "lucide-react";
+import { SquareCheck, SquareDot, SquareMinus, SquarePlus, SquareX } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import useIntrospection, { GqlTypeDef } from "../introspection";
+
+interface NullableModeSelectorProps {
+    onChange: (mode: true | null | undefined) => unknown;
+}
+
+function NullableModeSelector(props: NullableModeSelectorProps) {
+    const { onChange } = props;
+    const [mode, setMode] = useState<true | null | undefined>(undefined);
+
+    useEffect(() => {
+        onChange(mode);
+    }, [onChange, mode]);
+
+    return (
+        <span role="radiogroup" style={{ marginRight: "4px", verticalAlign: "middle" }}>
+            <SquareMinus
+                size={16}
+                onClick={() => {
+                    setMode(undefined);
+                }}
+                role="radio"
+                aria-label="omit"
+                aria-checked={mode === undefined}
+                style={{
+                    marginRight: "4px",
+                    cursor: "pointer",
+                    ...(mode === undefined && { color: "steelblue" }),
+                }}
+            />
+            <SquareDot
+                size={16}
+                onClick={() => {
+                    setMode(null);
+                }}
+                role="radio"
+                aria-label="set null"
+                aria-checked={mode === null}
+                style={{
+                    marginRight: "4px",
+                    cursor: "pointer",
+                    ...(mode === null && { color: "steelblue" }),
+                }}
+            />
+            <SquareCheck
+                size={16}
+                onClick={() => {
+                    setMode(true);
+                }}
+                role="radio"
+                aria-label="set value"
+                aria-checked={mode === true}
+                style={{
+                    marginRight: "4px",
+                    cursor: "pointer",
+                    ...(mode === true && { color: "steelblue" }),
+                }}
+            />
+        </span>
+    );
+}
 
 interface InlineScalarInputProps {
     name: string;
@@ -29,8 +89,10 @@ function InlineScalarInput(props: InlineScalarInputProps) {
                         setValue(e.target.value);
                     }}
                 />
-            </label>{" "}
-            <span style={{ color: "gray", fontStyle: "italic" }}>({props.typeName})</span>
+            </label>
+            <span style={{ marginLeft: "8px", color: "gray", fontStyle: "italic" }}>
+                ({props.typeName})
+            </span>
             {props.onRemove && (
                 <span style={{ marginLeft: "8px", verticalAlign: "middle" }}>
                     <SquareX
@@ -52,35 +114,26 @@ interface NullableScalarInputProps {
     name: string;
     typeName: string;
     disabled: boolean;
-    onChange: (value: string | null) => unknown;
+    onChange: (value: string | null | undefined) => unknown;
     onRemove?: () => unknown;
 }
 
 function NullableScalarInput(props: NullableScalarInputProps) {
     const { onChange } = props;
-    const [isNull, setIsNull] = useState(true);
+    const [mode, setMode] = useState<true | null | undefined>(undefined);
     const [value, setValue] = useState("");
 
     useEffect(() => {
-        onChange(isNull ? null : value);
-    }, [onChange, value, isNull]);
+        onChange(mode ? value : mode);
+    }, [onChange, mode, value]);
 
     return (
         <div style={{ margin: "4px 0" }}>
-            <input
-                type="checkbox"
-                checked={!isNull}
-                disabled={props.disabled}
-                aria-label={isNull ? "set non-null" : "set null"}
-                style={{ marginRight: "8px", verticalAlign: "middle" }}
-                onChange={(e) => {
-                    setIsNull(!e.target.checked);
-                }}
-            />
+            <NullableModeSelector onChange={setMode} />
             <InlineScalarInput
                 name={props.name}
                 typeName={props.typeName}
-                disabled={props.disabled || isNull}
+                disabled={props.disabled || !mode}
                 onChange={setValue}
                 onRemove={props.onRemove}
             />
@@ -175,36 +228,27 @@ interface NullableListInputProps {
     name: string;
     type: GqlTypeDef;
     disabled: boolean;
-    onChange: (value: unknown[] | null) => unknown;
+    onChange: (value: unknown[] | null | undefined) => unknown;
 }
 
 function NullableListInput(props: NullableListInputProps) {
     const { onChange } = props;
-    const [isNull, setIsNull] = useState(true);
+    const [mode, setMode] = useState<true | null | undefined>(undefined);
     const [value, setValue] = useState<unknown[]>([]);
 
     useEffect(() => {
-        onChange(isNull ? null : value);
-    }, [onChange, value, isNull]);
+        onChange(mode ? value : mode);
+    }, [onChange, mode, value]);
 
     return (
         <>
             <div style={{ margin: "4px 0", verticalAlign: "middle" }}>
-                <input
-                    type="checkbox"
-                    checked={!isNull}
-                    disabled={props.disabled}
-                    aria-label={isNull ? "set non-null" : "set null"}
-                    style={{ marginRight: "8px" }}
-                    onChange={(e) => {
-                        setIsNull(!e.target.checked);
-                    }}
-                />
+                <NullableModeSelector onChange={setMode} />
                 {props.name}:
             </div>
             <ListItemsInput
                 type={props.type}
-                disabled={props.disabled || isNull}
+                disabled={props.disabled || !mode}
                 onChange={setValue}
             />
         </>
@@ -271,37 +315,28 @@ interface NullableObjectInputProps {
     name: string;
     typeName: string;
     disabled: boolean;
-    onChange: (value: Record<string, unknown> | null) => unknown;
+    onChange: (value: Record<string, unknown> | null | undefined) => unknown;
 }
 
 function NullableObjectInput(props: NullableObjectInputProps) {
     const { onChange } = props;
-    const [isNull, setIsNull] = useState(true);
+    const [mode, setMode] = useState<true | null | undefined>(undefined);
     const [value, setValue] = useState<Record<string, unknown>>({});
 
     useEffect(() => {
-        onChange(isNull ? null : value);
-    }, [onChange, value, isNull]);
+        onChange(mode ? value : mode);
+    }, [onChange, mode, value]);
 
     return (
         <div>
             <div>
-                <input
-                    type="checkbox"
-                    checked={!isNull}
-                    disabled={props.disabled}
-                    aria-label={isNull ? "set non-null" : "set null"}
-                    style={{ marginRight: "8px" }}
-                    onChange={(e) => {
-                        setIsNull(!e.target.checked);
-                    }}
-                />
+                <NullableModeSelector onChange={setMode} />
                 {props.name}:
             </div>
             <ObjectFieldsInput
                 name={props.name}
                 typeName={props.typeName}
-                disabled={props.disabled || isNull}
+                disabled={props.disabled || !mode}
                 onChange={setValue}
             />
         </div>
