@@ -1,7 +1,4 @@
-import { gql } from "@apollo/client";
-import { useQuery } from "@apollo/client/react";
 import {
-    getIntrospectionQuery,
     IntrospectionField,
     IntrospectionInputObjectType,
     IntrospectionInputTypeRef,
@@ -11,6 +8,7 @@ import {
     IntrospectionQuery,
     IntrospectionType,
 } from "graphql";
+import { createContext, useContext } from "react";
 
 export interface GqlTypeDef {
     name: string;
@@ -228,12 +226,8 @@ export function makeTypeStrFromDef(type: GqlTypeDef): string {
     return typeStr;
 }
 
+export const IntrospectionContext = createContext<Introspection | null>(null);
+
 export default function useIntrospection(): Introspection | null {
-    const { data } = useQuery<IntrospectionQuery>(gql(getIntrospectionQuery()));
-
-    if (!data) {
-        return null;
-    }
-
-    return new Introspection(data);
+    return useContext(IntrospectionContext);
 }

@@ -4,6 +4,7 @@ import { MockedProvider } from "@apollo/client/testing/react";
 import type { Preview } from "@storybook/react-vite";
 import { getIntrospectionQuery, IntrospectionQuery } from "graphql";
 import React from "react";
+import { IntrospectionProvider } from "../src/IntrospectionProvider";
 import { default as defaultIntrospectionData } from "../src/test_schemas/introspection_data.json";
 import withRouter from "./routerDecorator";
 
@@ -47,7 +48,9 @@ const preview: Preview = {
                         ),
                     ]}
                 >
-                    <Story />
+                    <IntrospectionProvider>
+                        <Story />
+                    </IntrospectionProvider>
                 </MockedProvider>
             );
         },
