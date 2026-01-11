@@ -1,3 +1,4 @@
 *storybook.log
+.env
 node_modules
 storybook-static
