@@ -1,3 +1,6 @@
+import { gql } from "@apollo/client";
+import { useQuery } from "@apollo/client/react";
+import { getIntrospectionQuery } from "graphql";
 import useIntrospection, {
     GqlFieldDef,
     GqlObjectDef,
@@ -9,6 +12,10 @@ import { PathSpec } from "./pathSpecs";
 class FieldNotFoundError extends Error {}
 
 class ArgNotFoundError extends Error {}
+
+class PathNotFoundError extends Error {}
+
+class TargetDataNotFoundError extends Error {}
 
 function includeFieldInQuery(field: GqlFieldDef): boolean {
     if (field.requiresArguments) {
@@ -158,15 +165,73 @@ export class QueryBuilder {
     }
 }
 
-export default function useQueryBuilder(): {
-    introspection: Introspection | null;
-    queryBuilder: QueryBuilder | null;
-} {
-    const introspection = useIntrospection();
-
+function getTargetObject(
+    introspection: Introspection | null,
+    pathSpecs: PathSpec[],
+): GqlObjectDef | null {
     if (!introspection) {
-        return { introspection: null, queryBuilder: null };
+        return null;
     }
 
-    return { introspection: introspection, queryBuilder: new QueryBuilder(introspection) };
+    let targetObject = introspection.getRootObject();
+
+    pathSpecs.forEach((spec) => {
+        const field = targetObject.fields.get(spec.fieldName);
+        if (field) {
+            targetObject = introspection.getObjectByTypeName(field.type.name);
+        } else {
+            throw new PathNotFoundError();
+        }
+    });
+
+    return targetObject;
+}
+
+export default function useTargetObjectData(pathSpecs: PathSpec[]): {
+    targetObject: GqlObjectDef;
+    targetData: unknown;
+} | null {
+    const introspection = useIntrospection();
+    const targetObject = introspection ? getTargetObject(introspection, pathSpecs) : null;
+    const queryBuilder = introspection ? new QueryBuilder(introspection) : null;
+    const gqlQueryRequest = queryBuilder ? queryBuilder.makeFullQuery(pathSpecs) : null;
+
+    const { data: fullData } = useQuery(
+        gql(gqlQueryRequest ? gqlQueryRequest.queryStr : getIntrospectionQuery()),
+        { skip: !targetObject, variables: gqlQueryRequest?.vars ?? undefined },
+    );
+
+    if (!(targetObject && fullData)) {
+        return null;
+    }
+
+    let targetData = fullData;
+
+    pathSpecs.forEach((spec) => {
+        if (typeof targetData === "object" && !Array.isArray(targetData)) {
+            const tmp: unknown = targetData[spec.fieldName];
+            if (typeof tmp == "object" && tmp !== null) {
+                targetData = tmp;
+            } else {
+                throw new TargetDataNotFoundError();
+            }
+        } else {
+            throw new TargetDataNotFoundError();
+        }
+
+        if (spec.arrayIndex !== null) {
+            if (Array.isArray(targetData)) {
+                const tmp: unknown = targetData[spec.arrayIndex];
+                if (typeof tmp == "object" && tmp !== null) {
+                    targetData = tmp;
+                } else {
+                    throw new TargetDataNotFoundError();
+                }
+            } else {
+                throw new TargetDataNotFoundError();
+            }
+        }
+    });
+
+    return { targetObject, targetData };
 }
