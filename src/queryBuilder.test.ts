@@ -1,9 +1,9 @@
 import { IntrospectionQuery } from "graphql";
 import { beforeEach, describe, expect, it } from "vitest";
-import introspection_data from "../.storybook/introspection_data.json";
 import { Introspection } from "./introspection";
 import { PathSpec } from "./pathSpecs";
 import { QueryBuilder } from "./queryBuilder";
+import introspection_data from "./test_schemas/introspection_data.json";
 
 describe("makes query", () => {
     let introspection: Introspection;

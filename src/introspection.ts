@@ -103,6 +103,31 @@ export class Introspection {
         }
         return matchingTypes[0];
     }
+
+    supportsNodeQuery(): boolean {
+        const rootObject = this.getRootObject();
+        const nodeField = rootObject.fields.get("node");
+        return !!nodeField && nodeField.type.name === "Node";
+    }
+
+    doesNodeQuerySupportType(typeName: string): boolean {
+        if (!this.supportsNodeQuery()) {
+            return false;
+        }
+
+        // see if `typeName` matches any of the possible `Node` types
+        for (const dataType of this.data.__schema.types) {
+            if (dataType.kind === "INTERFACE" && dataType.name === "Node") {
+                for (const possibleType of dataType.possibleTypes) {
+                    if (possibleType.name === typeName) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
 }
 
 function createFieldStruct(fieldSchema: IntrospectionField): GqlFieldDef {

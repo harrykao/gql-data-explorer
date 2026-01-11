@@ -2,19 +2,21 @@ import { gql } from "@apollo/client";
 import { MockLink } from "@apollo/client/testing";
 import { MockedProvider } from "@apollo/client/testing/react";
 import type { Preview } from "@storybook/react-vite";
-import { getIntrospectionQuery } from "graphql";
+import { getIntrospectionQuery, IntrospectionQuery } from "graphql";
 import React from "react";
-import introspectionData from "./introspection_data.json";
+import { default as defaultIntrospectionData } from "../src/test_schemas/introspection_data.json";
 import withRouter from "./routerDecorator";
 
-const INTROSPECTION_MOCK: MockLink.MockedResponse = {
-    request: {
-        query: gql(getIntrospectionQuery()),
-    },
-    result: {
-        data: introspectionData,
-    },
-};
+function makeIntrospectionMock(schema: IntrospectionQuery): MockLink.MockedResponse {
+    return {
+        request: {
+            query: gql(getIntrospectionQuery()),
+        },
+        result: {
+            data: schema,
+        },
+    };
+}
 
 const preview: Preview = {
     parameters: {
@@ -34,11 +36,21 @@ const preview: Preview = {
     },
     tags: ["autodocs"],
     decorators: [
-        (Story) => (
-            <MockedProvider mocks={[INTROSPECTION_MOCK]}>
-                <Story />
-            </MockedProvider>
-        ),
+        (Story, context) => {
+            const { parameters } = context;
+            return (
+                <MockedProvider
+                    mocks={[
+                        makeIntrospectionMock(
+                            (parameters.introspectionData ??
+                                defaultIntrospectionData) as IntrospectionQuery,
+                        ),
+                    ]}
+                >
+                    <Story />
+                </MockedProvider>
+            );
+        },
         withRouter,
     ],
 };

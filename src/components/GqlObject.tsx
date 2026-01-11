@@ -1,5 +1,6 @@
+import { Link as LinkIcon } from "lucide-react";
 import React from "react";
-import { GqlObjectDef } from "../introspection";
+import useIntrospection, { GqlObjectDef } from "../introspection";
 import { PathSpec } from "../pathSpecs";
 import { GqlObjectType } from "../types";
 import Link from "./Link";
@@ -11,14 +12,23 @@ interface Props {
 }
 
 export default function GqlObject(props: Props) {
+    const introspection = useIntrospection();
+
+    if (!introspection) {
+        return null;
+    }
+
     const items: React.JSX.Element[] = [];
 
     props.def.fields.forEach((field, name) => {
+        const dataValue = props.data[name];
+
         // scalar values
-        if (props.data[name] !== undefined) {
+        if (dataValue !== undefined) {
+            const valueStr = typeof dataValue === "string" ? dataValue : "(unsupported type)";
             items.push(
                 <div key={name}>
-                    {name}: {String(props.data[name])}
+                    {name}: {valueStr}
                 </div>,
             );
         }
@@ -38,5 +48,23 @@ export default function GqlObject(props: Props) {
         }
     });
 
-    return items;
+    return (
+        <>
+            {introspection.doesNodeQuerySupportType(props.data.__typename) && (
+                <div>
+                    <LinkIcon
+                        size={24}
+                        aria-label="direct link"
+                        onClick={() => {
+                            //
+                        }}
+                        style={{
+                            cursor: "pointer",
+                        }}
+                    />
+                </div>
+            )}
+            {items}
+        </>
+    );
 }
