@@ -58,8 +58,9 @@ export const WithArgs: Story = {
         await expect(canvas.getByLabelText("query field")).toBeInTheDocument();
         await expect(canvas.getByLabelText("query field")).toHaveAttribute("href", "/fieldName");
 
-        // edit args
+        // edit args, set arg to null
         await userEvent.click(canvas.getByLabelText("edit arguments"));
+        await userEvent.click(canvas.getByLabelText("set null"));
         await expect(canvas.getByLabelText("query field")).toHaveAttribute(
             "href",
             `/${encodeURI(makeUrlPath([new PathSpec("fieldName", { argName: null }, null)]))}`,

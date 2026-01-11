@@ -175,13 +175,17 @@ export const ObjectNullable: Story = {
         const canvas = within(canvasElement);
 
         await expect(await canvas.findAllByLabelText("add item")).toHaveLength(2);
+
+        // initially omitted
+        await expect(args.onChange).toHaveBeenLastCalledWith(undefined);
+
+        // set to null
+        await userEvent.click(canvas.getAllByLabelText("set null")[0]);
         await expect(args.onChange).toHaveBeenLastCalledWith(null);
 
         // enable
-        await userEvent.click(canvas.getAllByRole("checkbox")[0]);
+        await userEvent.click(canvas.getAllByLabelText("set value")[0]);
         await expect(args.onChange).toHaveBeenLastCalledWith({
-            nullableString: null,
-            nullableListOfNullableStrings: null,
             nonNullableListOfNonNullableStrings: [],
         });
     },
