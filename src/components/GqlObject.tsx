@@ -1,7 +1,8 @@
+import { Link as RouterLink } from "@tanstack/react-router";
 import { Link as LinkIcon } from "lucide-react";
 import React from "react";
 import useIntrospection, { GqlObjectDef } from "../introspection";
-import { PathSpec } from "../pathSpecs";
+import { makeUrlPath, PathSpec } from "../pathSpecs";
 import { GqlObjectType } from "../types";
 import Link from "./Link";
 
@@ -51,18 +52,20 @@ export default function GqlObject(props: Props) {
     return (
         <>
             {introspection.doesNodeQuerySupportType(props.data.__typename) && (
-                <div>
+                <RouterLink
+                    to="/$"
+                    params={{
+                        _splat: makeUrlPath([new PathSpec("node", { id: props.data.id }, null)]),
+                    }}
+                >
                     <LinkIcon
                         size={24}
                         aria-label="direct link"
                         onClick={() => {
                             //
                         }}
-                        style={{
-                            cursor: "pointer",
-                        }}
                     />
-                </div>
+                </RouterLink>
             )}
             {items}
         </>

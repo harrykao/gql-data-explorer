@@ -13,9 +13,9 @@ class FieldNotFoundError extends Error {}
 
 class ArgNotFoundError extends Error {}
 
-class PathNotFoundError extends Error {}
-
 class TargetDataNotFoundError extends Error {}
+
+class MissingNodeTypeError extends Error {}
 
 function includeFieldInQuery(field: GqlFieldDef): boolean {
     if (field.requiresArguments) {
@@ -35,10 +35,32 @@ interface GqlRequest {
     vars: Record<string, unknown> | null;
 }
 
-interface _PathSpecAndGqlObject {
+/**
+ * Represents a "frame", or an edge, in the graph query.
+ */
+interface _QueryFrame {
+    /**
+     * PathSpec corresponding to this frame.
+     *
+     * Qualifiers like arguments and the array index are obtained from the PathSpec.
+     *
+     * This will be null for the root object.
+     */
     pathSpec: PathSpec | null;
+
+    /**
+     * Object definition for the parent.
+     *
+     * Needed to look up field definitions to get the types that are used when declaring variables.
+     *
+     * This will be null for the root object.
+     */
     parentGqlObject: GqlObjectDef | null;
-    gqlObject: GqlObjectDef;
+
+    /**
+     * The type when this frame correspondse to the node query.
+     */
+    nodeType: string | null;
 }
 
 export class QueryBuilder {
@@ -48,54 +70,87 @@ export class QueryBuilder {
         this.introspection = introspection;
     }
 
-    _get_parent_objects(pathSpecs: readonly PathSpec[]): _PathSpecAndGqlObject[] {
-        const objs: _PathSpecAndGqlObject[] = [
+    _make_frames(
+        pathSpecs: readonly PathSpec[],
+        nodeType: string | null,
+    ): { frames: _QueryFrame[]; targetObject: GqlObjectDef } {
+        const frames: _QueryFrame[] = [
             {
                 pathSpec: null,
                 parentGqlObject: null,
-                gqlObject: this.introspection.getRootObject(),
+                nodeType: null,
             },
         ];
 
-        pathSpecs.forEach((spec) => {
-            const parentObj = objs[objs.length - 1].gqlObject;
-            const field = parentObj.fields.get(spec.fieldName);
-            if (!field) {
-                throw new FieldNotFoundError();
+        // The GQL object corresponding to the frame that we just added to the array. When we're
+        // done iterating through the path specs, this will be the ultimate object that we're
+        // querying.
+        let currentObject = this.introspection.getRootObject();
+
+        pathSpecs.forEach((spec, i) => {
+            // node query
+            if (i === 0 && spec.fieldName === "node" && this.introspection.supportsNodeQuery()) {
+                if (nodeType === null) {
+                    throw new MissingNodeTypeError();
+                }
+
+                frames.push({
+                    pathSpec: spec,
+                    parentGqlObject: currentObject,
+                    nodeType: nodeType,
+                });
+
+                currentObject = this.introspection.getObjectByTypeName(nodeType);
             }
-            objs.push({
-                pathSpec: spec,
-                parentGqlObject: objs[objs.length - 1].gqlObject,
-                gqlObject: this.introspection.getObjectByTypeName(field.type.name),
-            });
+
+            // everything else
+            else {
+                frames.push({
+                    pathSpec: spec,
+                    parentGqlObject: currentObject,
+                    nodeType: null,
+                });
+
+                const field = currentObject.fields.get(spec.fieldName);
+                if (!field) {
+                    throw new FieldNotFoundError();
+                } else {
+                    currentObject = this.introspection.getObjectByTypeName(field.type.name);
+                }
+            }
         });
 
-        return objs;
+        return { frames, targetObject: currentObject };
     }
 
     /**
-     * Construct a query string for the fields that don't require arguments
-     * (meaning that they either don't accept arguments or all arguments have
-     * default values).
+     * Construct a query string for the fields that don't require arguments (meaning that they
+     * either don't accept arguments or all arguments have default values).
      */
     _makeObjectQuery(object: GqlObjectDef): string {
         const queryFields = [...object.fields.values()].filter(includeFieldInQuery);
         return `{ ${[...queryFields.map((f) => f.name), "__typename"].join(" ")} }`;
     }
 
-    makeFullQuery(parentSpecs: readonly PathSpec[]): GqlRequest {
-        const specsAndObjects = this._get_parent_objects(parentSpecs);
+    makeFullQuery(
+        parentSpecs: readonly PathSpec[],
+        nodeType: string | null = null,
+    ): {
+        request: GqlRequest;
+        targetObject: GqlObjectDef;
+    } {
+        const { frames, targetObject } = this._make_frames(parentSpecs, nodeType);
 
-        // variable name -> [value, GQL type string]
-        const vars: Record<string, [unknown, string]> = {};
+        // keep track of variables that we're using in the query
+        const vars: Record<string, { value: unknown; gqlTypeStr: string }> = {};
 
         // we'll add to this string as we build the query from inside out
-        let queryStr = this._makeObjectQuery(specsAndObjects[specsAndObjects.length - 1].gqlObject);
+        let queryStr = this._makeObjectQuery(targetObject);
 
         // iterate through the objects from the leaf to the root
-        let specAndObject: _PathSpecAndGqlObject | undefined;
-        while ((specAndObject = specsAndObjects.pop())) {
-            const { pathSpec, parentGqlObject } = specAndObject;
+        let frame: _QueryFrame | undefined;
+        while ((frame = frames.pop())) {
+            const { pathSpec, parentGqlObject, nodeType } = frame;
 
             // if we haven't reached the root, add the field name/arguments
             if (pathSpec && parentGqlObject) {
@@ -122,7 +177,10 @@ export class QueryBuilder {
 
                         // save the value (to return for use in the query) and
                         // the GQL type string (for constructing the query)
-                        vars[varName] = [args[argName], makeTypeStrFromDef(arg.type)];
+                        vars[varName] = {
+                            value: args[argName],
+                            gqlTypeStr: makeTypeStrFromDef(arg.type),
+                        };
                         return [argName, varName] as const;
                     });
 
@@ -133,7 +191,11 @@ export class QueryBuilder {
                     fieldStr = `${fieldStr}(${argsStr})`;
                 }
 
-                queryStr = `{ ${fieldStr} ${queryStr} }`;
+                if (nodeType) {
+                    queryStr = `{ ${fieldStr} { ... on ${nodeType} ${queryStr} } }`;
+                } else {
+                    queryStr = `{ ${fieldStr} ${queryStr} }`;
+                }
             }
 
             // root
@@ -142,7 +204,7 @@ export class QueryBuilder {
                 if (Object.keys(vars).length) {
                     const varDefStr = Object.keys(vars)
                         .map((varName) => {
-                            const type = vars[varName][1];
+                            const type = vars[varName].gqlTypeStr;
                             return `$${varName}: ${type}`;
                         })
                         .join(", ");
@@ -158,33 +220,11 @@ export class QueryBuilder {
         if (Object.keys(vars).length) {
             query_vars = {};
             for (const varName of Object.keys(vars)) {
-                query_vars[varName] = vars[varName][0];
+                query_vars[varName] = vars[varName].value;
             }
         }
-        return { queryStr, vars: query_vars };
+        return { request: { queryStr, vars: query_vars }, targetObject };
     }
-}
-
-function getTargetObject(
-    introspection: Introspection | null,
-    pathSpecs: PathSpec[],
-): GqlObjectDef | null {
-    if (!introspection) {
-        return null;
-    }
-
-    let targetObject = introspection.getRootObject();
-
-    pathSpecs.forEach((spec) => {
-        const field = targetObject.fields.get(spec.fieldName);
-        if (field) {
-            targetObject = introspection.getObjectByTypeName(field.type.name);
-        } else {
-            throw new PathNotFoundError();
-        }
-    });
-
-    return targetObject;
 }
 
 export default function useTargetObjectData(pathSpecs: PathSpec[]): {
@@ -192,14 +232,49 @@ export default function useTargetObjectData(pathSpecs: PathSpec[]): {
     targetData: unknown;
 } | null {
     const introspection = useIntrospection();
-    const targetObject = introspection ? getTargetObject(introspection, pathSpecs) : null;
-    const queryBuilder = introspection ? new QueryBuilder(introspection) : null;
-    const gqlQueryRequest = queryBuilder ? queryBuilder.makeFullQuery(pathSpecs) : null;
 
+    const isNodeQuery = introspection
+        ? introspection.supportsNodeQuery() &&
+          pathSpecs.length === 1 &&
+          pathSpecs[0].fieldName === "node" &&
+          pathSpecs[0].args?.id !== undefined
+        : null;
+
+    // if we're doing a node query, we need to get the node type
+    const { data: nodeTypeData } = useQuery(
+        gql(
+            isNodeQuery
+                ? `query ($id: ID!) { node(id: $id) { __typename } }`
+                : getIntrospectionQuery(),
+        ),
+        { skip: !isNodeQuery, variables: { id: pathSpecs[0]?.args?.id } },
+    );
+
+    // we're ready to query the target object if:
+    const readyToQueryTargetObject =
+        introspection && // we've performed the introspection query
+        isNodeQuery !== null && // we've determined whether this is a node query
+        !(isNodeQuery && !nodeTypeData); // we're not waiting for the node type if it's a node query
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const nodeType: string | null = readyToQueryTargetObject
+        ? nodeTypeData
+            ? // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+              nodeTypeData.node.__typename
+            : null
+        : null;
+
+    const queryBuilder = introspection ? new QueryBuilder(introspection) : null;
+    const { request: gqlQueryRequest, targetObject } =
+        readyToQueryTargetObject && queryBuilder
+            ? queryBuilder.makeFullQuery(pathSpecs, nodeType)
+            : { request: null, targetObject: null };
     const { data: fullData } = useQuery(
         gql(gqlQueryRequest ? gqlQueryRequest.queryStr : getIntrospectionQuery()),
         { skip: !targetObject, variables: gqlQueryRequest?.vars ?? undefined },
     );
+
+    console.log(targetObject);
 
     if (!(targetObject && fullData)) {
         return null;
