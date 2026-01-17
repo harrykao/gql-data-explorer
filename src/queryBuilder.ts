@@ -235,7 +235,7 @@ export default function useTargetObjectData(pathSpecs: PathSpec[]): {
 
     const isNodeQuery = introspection
         ? introspection.supportsNodeQuery() &&
-          pathSpecs.length === 1 &&
+          pathSpecs.length >= 1 &&
           pathSpecs[0].fieldName === "node" &&
           pathSpecs[0].args?.id !== undefined
         : null;
@@ -273,8 +273,6 @@ export default function useTargetObjectData(pathSpecs: PathSpec[]): {
         gql(gqlQueryRequest ? gqlQueryRequest.queryStr : getIntrospectionQuery()),
         { skip: !targetObject, variables: gqlQueryRequest?.vars ?? undefined },
     );
-
-    console.log(targetObject);
 
     if (!(targetObject && fullData)) {
         return null;

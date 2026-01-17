@@ -17,14 +17,12 @@ describe("PathSpec serialization", () => {
     it("serializes params", () => {
         const spec = new PathSpec("fieldName", { paramName: '(["/])' }, null);
         const str = spec.toString();
-        console.log(str);
         expect(PathSpec.fromString(str)).toEqual(spec);
     });
 
     it("serializes params and array index", () => {
         const spec = new PathSpec("fieldName", { paramName: '(["/])' }, 2);
         const str = spec.toString();
-        console.log(str);
         expect(PathSpec.fromString(str)).toEqual(spec);
     });
 });
