@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
-import testSchemaWithNode from "../test_schemas/with_node.json";
-import testSchemaWithoutNode from "../test_schemas/without_node.json";
+import { getTestSchema, NO_NODE_SCHEMA, NODE_SCHEMA } from "../test_schemas/testSchemas";
 import GqlObject from "./GqlObject";
 
 const meta = {
@@ -16,7 +15,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const ScalarField: Story = {
-    parameters: { introspectionData: testSchemaWithoutNode },
+    parameters: { introspectionData: getTestSchema(NO_NODE_SCHEMA) },
     args: {
         def: {
             description: "Object description.",
@@ -40,7 +39,7 @@ export const ScalarField: Story = {
             ]),
         },
         data: {
-            __typename: "Incentive",
+            __typename: "MyType",
             scalarField: "a scalar value",
         },
         parentPathSpecs: [],
@@ -54,7 +53,7 @@ export const ScalarField: Story = {
 };
 
 export const ScalarFieldWithNodeQuery: Story = {
-    parameters: { introspectionData: testSchemaWithNode },
+    parameters: { introspectionData: getTestSchema(NODE_SCHEMA) },
     args: {
         def: {
             description: "Object description.",
@@ -78,7 +77,7 @@ export const ScalarFieldWithNodeQuery: Story = {
             ]),
         },
         data: {
-            __typename: "Incentive",
+            __typename: "MyType",
             scalarField: "a scalar value",
         },
         parentPathSpecs: [],

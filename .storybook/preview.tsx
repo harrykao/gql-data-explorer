@@ -5,7 +5,7 @@ import type { Preview } from "@storybook/react-vite";
 import { getIntrospectionQuery, IntrospectionQuery } from "graphql";
 import React from "react";
 import { IntrospectionProvider } from "../src/IntrospectionProvider";
-import { default as defaultIntrospectionData } from "../src/test_schemas/introspection_data.json";
+import { getTestSchema, QUERY_BUILDER_TEST_SCHEMA } from "../src/test_schemas/testSchemas";
 import withRouter from "./routerDecorator";
 
 function makeIntrospectionMock(schema: IntrospectionQuery): MockLink.MockedResponse {
@@ -44,7 +44,7 @@ const preview: Preview = {
                     mocks={[
                         makeIntrospectionMock(
                             (parameters.introspectionData ??
-                                defaultIntrospectionData) as IntrospectionQuery,
+                                getTestSchema(QUERY_BUILDER_TEST_SCHEMA)) as IntrospectionQuery,
                         ),
                     ]}
                 >

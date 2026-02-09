@@ -46,4 +46,6 @@ export default defineConfig({
             },
         ],
     },
+    // https://github.com/vitest-dev/vitest/issues/4605
+    resolve: { alias: { graphql: "graphql/index.js" } },
 });

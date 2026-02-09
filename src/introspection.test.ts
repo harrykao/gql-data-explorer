@@ -1,7 +1,6 @@
 import {
     IntrospectionListTypeRef,
     IntrospectionNonNullTypeRef,
-    IntrospectionQuery,
     IntrospectionScalarType,
 } from "graphql";
 import { describe, expect, it } from "vitest";
@@ -11,9 +10,12 @@ import {
     extractTypeInformation,
     makeTypeStrFromDef,
 } from "./introspection";
-import testSchemaWithNode from "./test_schemas/with_node.json";
-import testSchemaWithNodeOfWrongType from "./test_schemas/with_node_of_wrong_type.json";
-import testSchemaWithoutNode from "./test_schemas/without_node.json";
+import {
+    NODE_OF_WRONG_TYPE_SCHEMA,
+    NODE_SCHEMA,
+    NO_NODE_SCHEMA,
+    getTestSchema,
+} from "./test_schemas/testSchemas";
 
 describe("extractTypeInformation()", () => {
     it("parses nullable scalar", () => {
@@ -183,46 +185,40 @@ describe("makeTypeStrFromDef()", () => {
 
 describe("Introspection.supportsNodeQuery()", () => {
     it("identifies schemas that support the `node` query", () => {
-        const result = new Introspection(
-            testSchemaWithNode as IntrospectionQuery,
-        ).supportsNodeQuery();
+        const schema = getTestSchema(NODE_SCHEMA);
+        const result = new Introspection(schema).supportsNodeQuery();
         expect(result).toBe(true);
     });
 
     it("returns false for node fields of wrong type", () => {
-        const result = new Introspection(
-            testSchemaWithNodeOfWrongType as IntrospectionQuery,
-        ).supportsNodeQuery();
+        const schema = getTestSchema(NODE_OF_WRONG_TYPE_SCHEMA);
+        const result = new Introspection(schema).supportsNodeQuery();
         expect(result).toBe(false);
     });
 
     it("returns false for schema without node field", () => {
-        const result = new Introspection(
-            testSchemaWithoutNode as IntrospectionQuery,
-        ).supportsNodeQuery();
+        const schema = getTestSchema(NO_NODE_SCHEMA);
+        const result = new Introspection(schema).supportsNodeQuery();
         expect(result).toBe(false);
     });
 });
 
 describe("Introspection.doesNodeQuerySupportType()", () => {
     it("returns true for supported type", () => {
-        const result = new Introspection(
-            testSchemaWithNode as IntrospectionQuery,
-        ).doesNodeQuerySupportType("Doctype");
+        const schema = getTestSchema(NODE_SCHEMA);
+        const result = new Introspection(schema).doesNodeQuerySupportType("MyType");
         expect(result).toBe(true);
     });
 
     it("returns false for unsupported type", () => {
-        const result = new Introspection(
-            testSchemaWithNode as IntrospectionQuery,
-        ).doesNodeQuerySupportType("UnsupportedType");
+        const schema = getTestSchema(NODE_SCHEMA);
+        const result = new Introspection(schema).doesNodeQuerySupportType("UnsupportedType");
         expect(result).toBe(false);
     });
 
     it("returns false for schema without node field", () => {
-        const result = new Introspection(
-            testSchemaWithoutNode as IntrospectionQuery,
-        ).doesNodeQuerySupportType("Doctype");
+        const schema = getTestSchema(NO_NODE_SCHEMA);
+        const result = new Introspection(schema).doesNodeQuerySupportType("Doctype");
         expect(result).toBe(false);
     });
 });

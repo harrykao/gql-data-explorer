@@ -1,17 +1,16 @@
-import { IntrospectionQuery } from "graphql";
 import { beforeEach, describe, expect, it } from "vitest";
 import { Introspection } from "./introspection";
 import { PathSpec } from "./pathSpecs";
 import { QueryBuilder } from "./queryBuilder";
-import introspection_data from "./test_schemas/introspection_data.json";
-import with_node_introspection_data from "./test_schemas/with_node.json";
+import { getTestSchema, NODE_SCHEMA, QUERY_BUILDER_TEST_SCHEMA } from "./test_schemas/testSchemas";
 
 describe("makes query", () => {
     let introspection: Introspection;
     let queryBuilder: QueryBuilder;
 
     beforeEach(() => {
-        introspection = new Introspection(introspection_data as IntrospectionQuery);
+        const schema = getTestSchema(QUERY_BUILDER_TEST_SCHEMA);
+        introspection = new Introspection(schema);
         queryBuilder = new QueryBuilder(introspection);
     });
 
@@ -36,18 +35,18 @@ describe("makes query", () => {
 
     describe("with node query", () => {
         beforeEach(() => {
-            introspection = new Introspection(with_node_introspection_data as IntrospectionQuery);
+            introspection = new Introspection(getTestSchema(NODE_SCHEMA));
             queryBuilder = new QueryBuilder(introspection);
         });
 
         it("uses inline fragment on node query", () => {
             const { request } = queryBuilder.makeFullQuery(
                 [new PathSpec("node", { id: "NODE_ID" }, null)],
-                "Doctype",
+                "MyType",
             );
             expect(request).toEqual({
                 queryStr:
-                    "query ($var0: ID!) { node(id: $var0) { ... on Doctype { id pk __typename } } }",
+                    "query ($var0: ID!) { node(id: $var0) { ... on MyType { id pk __typename } } }",
                 vars: { var0: "NODE_ID" },
             });
         });
