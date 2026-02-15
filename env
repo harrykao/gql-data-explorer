@@ -1,3 +1,4 @@
 # Sample environment variables. Copy this to .env and customize.
 
+VITE_CONFIG_FILE=config.ts
 VITE_GQL_URL=https://countries.trevorblades.com/

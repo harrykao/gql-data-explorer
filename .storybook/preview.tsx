@@ -4,7 +4,7 @@ import { MockedProvider } from "@apollo/client/testing/react";
 import type { Preview } from "@storybook/react-vite";
 import { getIntrospectionQuery, IntrospectionQuery } from "graphql";
 import React from "react";
-import { IntrospectionProvider } from "../src/IntrospectionProvider";
+import { IntrospectionProvider } from "../src/introspectionProvider";
 import { getTestSchema, QUERY_BUILDER_TEST_SCHEMA } from "../src/test_schemas/testSchemas";
 import withRouter from "./routerDecorator";
 

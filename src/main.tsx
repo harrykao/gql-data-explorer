@@ -1,11 +1,10 @@
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-
 import { ApolloProvider } from "@apollo/client/react";
 import { RouterProvider } from "@tanstack/react-router";
-import React from "react";
+import React, { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
 import { client } from "./apollo";
-import { IntrospectionProvider } from "./IntrospectionProvider";
+import { ConfigurationProvider } from "./configurationProvider";
+import { IntrospectionProvider } from "./introspectionProvider";
 import { router } from "./router";
 
 const rootEl = document.getElementById("root");
@@ -13,11 +12,13 @@ const rootEl = document.getElementById("root");
 if (rootEl) {
     createRoot(rootEl).render(
         <StrictMode>
-            <ApolloProvider client={client}>
-                <IntrospectionProvider>
-                    <RouterProvider router={router} />
-                </IntrospectionProvider>
-            </ApolloProvider>
+            <ConfigurationProvider>
+                <ApolloProvider client={client}>
+                    <IntrospectionProvider>
+                        <RouterProvider router={router} />
+                    </IntrospectionProvider>
+                </ApolloProvider>
+            </ConfigurationProvider>
         </StrictMode>,
     );
 }
