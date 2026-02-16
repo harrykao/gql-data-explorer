@@ -1,8 +1,12 @@
 import React, { useState } from "react";
-import { Config, ConfigContext, DEFAULT_CONFIG } from "./configuration";
+import { Config, ConfigContext } from "./configuration";
 
-export const ConfigurationProvider = ({ children }) => {
-    const [config, setConfig] = useState(DEFAULT_CONFIG);
+interface ConfigurationProviderProps {
+    children: React.ReactNode;
+}
+
+export const ConfigurationProvider = ({ children }: ConfigurationProviderProps) => {
+    const [config, setConfig] = useState<Config | null>(null);
 
     import(`../${import.meta.env.VITE_CONFIG_FILE}`)
         .then((module) => {
@@ -13,5 +17,17 @@ export const ConfigurationProvider = ({ children }) => {
             console.log("could not load config");
         });
 
+    return <ConfigContext.Provider value={config}>{children}</ConfigContext.Provider>;
+};
+
+interface MockedConfigurationProviderProps {
+    config: Config;
+    children: React.ReactNode;
+}
+
+export const MockedConfigurationProvider = ({
+    config,
+    children,
+}: MockedConfigurationProviderProps) => {
     return <ConfigContext.Provider value={config}>{children}</ConfigContext.Provider>;
 };

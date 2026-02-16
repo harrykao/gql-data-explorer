@@ -4,7 +4,10 @@ import { MockedProvider } from "@apollo/client/testing/react";
 import type { Preview } from "@storybook/react-vite";
 import { getIntrospectionQuery, IntrospectionQuery } from "graphql";
 import React from "react";
+import { Config } from "../src/configuration";
+import { MockedConfigurationProvider } from "../src/configurationProvider";
 import { IntrospectionProvider } from "../src/introspectionProvider";
+import { MockedRouterProvider } from "../src/routerMock";
 import { getTestSchema, QUERY_BUILDER_TEST_SCHEMA } from "../src/test_schemas/testSchemas";
 import withRouter from "./routerDecorator";
 
@@ -39,19 +42,19 @@ const preview: Preview = {
     decorators: [
         (Story, context) => {
             const { parameters } = context;
+            const config = parameters.config ? (parameters.config as Config) : { views: [] };
+            const introspectionData = parameters.introspectionData
+                ? (parameters.introspectionData as IntrospectionQuery)
+                : getTestSchema(QUERY_BUILDER_TEST_SCHEMA);
+
             return (
-                <MockedProvider
-                    mocks={[
-                        makeIntrospectionMock(
-                            (parameters.introspectionData ??
-                                getTestSchema(QUERY_BUILDER_TEST_SCHEMA)) as IntrospectionQuery,
-                        ),
-                    ]}
-                >
-                    <IntrospectionProvider>
-                        <Story />
-                    </IntrospectionProvider>
-                </MockedProvider>
+                <MockedConfigurationProvider config={config}>
+                    <MockedProvider mocks={[makeIntrospectionMock(introspectionData)]}>
+                        <IntrospectionProvider>
+                            <MockedRouterProvider component={Story} />
+                        </IntrospectionProvider>
+                    </MockedProvider>
+                </MockedConfigurationProvider>
             );
         },
         withRouter,

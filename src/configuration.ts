@@ -15,10 +15,6 @@ export interface Config {
     views: View[];
 }
 
-export const DEFAULT_CONFIG: Config = {
-    views: [],
-};
-
 export function validateConfiguration(config: Config, introspection: Introspection): string[] {
     const errors: string[] = [];
     config.views.forEach((view) => {
@@ -54,8 +50,8 @@ function validateField(field: Field, gqlObject: GqlObjectDef): string[] {
     return [];
 }
 
-export const ConfigContext = createContext<Config>(DEFAULT_CONFIG);
+export const ConfigContext = createContext<Config | null>(null);
 
-export default function useConfiguration(): Config {
+export default function useConfiguration(): Config | null {
     return useContext(ConfigContext);
 }

@@ -1,5 +1,5 @@
 *storybook.log
 .env
 node_modules
-sample-config.ts
+sampleConfig.ts
 storybook-static
