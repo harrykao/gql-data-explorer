@@ -34,6 +34,7 @@ export interface GqlFieldDef {
 }
 
 export interface GqlObjectDef {
+    name: string;
     description: string | null;
     fields: Map<string, GqlFieldDef>;
 }
@@ -50,7 +51,7 @@ export interface GqlInputObjectDef {
     inputFields: Map<string, GqlInputFieldDef>;
 }
 
-class TypeNotFoundError extends Error {}
+export class TypeNotFoundError extends Error {}
 
 export class Introspection {
     data: IntrospectionQuery;
@@ -67,6 +68,7 @@ export class Introspection {
         const objectType = this._getObjectTypeByName(typeName);
         const fields = objectType.fields.map(createFieldStruct);
         return {
+            name: typeName,
             description: objectType.description ?? null,
             fields: new Map(fields.map((f) => [f.name, f])),
         };
