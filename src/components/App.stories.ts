@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import { Config } from "../configuration";
-import { PathSpec } from "../pathSpecs";
 import App from "./App";
 
 const meta = {
@@ -17,11 +16,6 @@ type Story = StoryObj<typeof meta>;
 
 export const WithInvalidConfig: Story = {
     parameters: { config: { views: [{ objectName: "MissingObject", fields: [] }] } as Config },
-    args: {
-        pathSpecs: [new PathSpec("fieldName", null, null)],
-        args: [],
-        requiresArguments: false,
-    },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
 
@@ -29,5 +23,29 @@ export const WithInvalidConfig: Story = {
             await canvas.findByText("Configuration validation errors:"),
         ).toBeInTheDocument();
         await expect(canvas.getByText("Type `MissingObject` does not exist.")).toBeInTheDocument();
+    },
+};
+
+export const ObjectWithNoConfig: Story = {
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await expect(await canvas.findByText("rootField")).toBeInTheDocument();
+    },
+};
+
+export const ObjectWithConfig: Story = {
+    parameters: {
+        config: {
+            views: [
+                {
+                    objectName: "Query",
+                    fields: [{ fieldName: "rootField", displayName: "Root Field" }],
+                },
+            ],
+        } as Config,
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await expect(await canvas.findByText("Root Field")).toBeInTheDocument();
     },
 };

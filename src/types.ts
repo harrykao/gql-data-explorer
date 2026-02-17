@@ -1,1 +1,1 @@
-export type GqlObjectType = { __typename: string } & Record<string, unknown>;
+export type GqlObjectData = { __typename: string } & Record<string, unknown>;

@@ -8,7 +8,10 @@ interface ConfigurationProviderProps {
 export const ConfigurationProvider = ({ children }: ConfigurationProviderProps) => {
     const [config, setConfig] = useState<Config | null>(null);
 
-    import(`../${import.meta.env.VITE_CONFIG_FILE}`)
+    import(
+        /* @vite-ignore */
+        `../${import.meta.env.VITE_CONFIG_FILE}`
+    )
         .then((module) => {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             setConfig(module.default as Config);

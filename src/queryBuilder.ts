@@ -113,7 +113,7 @@ export class QueryBuilder {
 
                 const field = currentObject.fields.get(spec.fieldName);
                 if (!field) {
-                    throw new FieldNotFoundError();
+                    throw new FieldNotFoundError(spec.fieldName);
                 } else {
                     currentObject = this.introspection.getObjectByTypeName(field.type.name);
                 }
@@ -168,7 +168,7 @@ export class QueryBuilder {
                         // find the argument definition in order to determin the arg's type
                         const field = parentGqlObject.fields.get(pathSpec.fieldName);
                         if (!field) {
-                            throw new FieldNotFoundError();
+                            throw new FieldNotFoundError(pathSpec.fieldName);
                         }
                         const arg = field.args.find((a) => a.name === argName);
                         if (!arg) {

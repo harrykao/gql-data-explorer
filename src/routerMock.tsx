@@ -1,5 +1,5 @@
 import {
-    createBrowserHistory,
+    createMemoryHistory,
     createRootRoute,
     createRoute,
     createRouter,
@@ -19,9 +19,9 @@ export const MockedRouterProvider = ({ component }: Props) => {
         path: "$",
         component,
     });
-
-    const history = createBrowserHistory();
     const routeTree = rootRoute.addChildren([rootQueryRoute]);
+
+    const history = createMemoryHistory({ initialEntries: ["/"] });
     const router = createRouter({ routeTree, history });
 
     return <RouterProvider router={router} />;

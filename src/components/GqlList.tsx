@@ -1,12 +1,12 @@
 import React from "react";
 import { GqlObjectDef } from "../introspection";
 import { PathSpec } from "../pathSpecs";
-import { GqlObjectType } from "../types";
+import { GqlObjectData } from "../types";
 import Link from "./Link";
 
 interface GqlListProps {
     def: GqlObjectDef;
-    data: readonly GqlObjectType[];
+    data: readonly GqlObjectData[];
     parentPathSpecs: readonly PathSpec[];
 }
 
@@ -52,7 +52,7 @@ export default function GqlList(props: GqlListProps) {
 interface RowProps {
     index: number;
     def: GqlObjectDef;
-    data: GqlObjectType;
+    data: GqlObjectData;
     parentPathSpecs: readonly PathSpec[];
 }
 

@@ -1,14 +1,15 @@
 import { useParams } from "@tanstack/react-router";
 import React from "react";
-import useConfiguration, { validateConfiguration } from "../configuration";
+import useConfiguration, { Config, validateConfiguration, View } from "../configuration";
 import useIntrospection from "../introspection";
 import { parseUrlPath, PathSpec } from "../pathSpecs";
 import useTargetObjectData from "../queryBuilder";
-import { GqlObjectType } from "../types";
+import { GqlObjectData } from "../types";
 import GqlList from "./GqlList";
 import GqlObject from "./GqlObject";
 
 interface GqlDataProps {
+    config: Config;
     pathSpecs: PathSpec[];
 }
 
@@ -21,13 +22,20 @@ function GqlData(props: GqlDataProps) {
 
     const { targetObject, targetData } = queryResult;
 
+    // see if there's a matching view
+    const viewsByObjectName = new Map<string, View>();
+    props.config.views.forEach((v) => {
+        viewsByObjectName.set(v.objectName, v);
+    });
+
     if (Array.isArray(targetData)) {
         return <GqlList def={targetObject} data={targetData} parentPathSpecs={props.pathSpecs} />;
     } else {
         return (
             <GqlObject
                 def={targetObject}
-                data={targetData as GqlObjectType}
+                data={targetData as GqlObjectData}
+                view={viewsByObjectName.get(targetObject.name) ?? null}
                 parentPathSpecs={props.pathSpecs}
             />
         );
@@ -60,7 +68,7 @@ function App() {
         );
     }
 
-    return <GqlData pathSpecs={pathSpecs} />;
+    return <GqlData config={config} pathSpecs={pathSpecs} />;
 }
 
 export default App;
