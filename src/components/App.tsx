@@ -27,15 +27,23 @@ function GqlData(props: GqlDataProps) {
     props.config.views.forEach((v) => {
         viewsByObjectName.set(v.objectName, v);
     });
+    const view = viewsByObjectName.get(targetObject.name) ?? null;
 
     if (Array.isArray(targetData)) {
-        return <GqlList def={targetObject} data={targetData} parentPathSpecs={props.pathSpecs} />;
+        return (
+            <GqlList
+                def={targetObject}
+                data={targetData}
+                view={view}
+                parentPathSpecs={props.pathSpecs}
+            />
+        );
     } else {
         return (
             <GqlObject
                 def={targetObject}
                 data={targetData as GqlObjectData}
-                view={viewsByObjectName.get(targetObject.name) ?? null}
+                view={view}
                 parentPathSpecs={props.pathSpecs}
             />
         );

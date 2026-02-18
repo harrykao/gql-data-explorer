@@ -10,9 +10,10 @@ import React from "react";
 
 interface Props {
     component: RouteComponent;
+    initialEntry: string | null; // defaults to "/"
 }
 
-export const MockedRouterProvider = ({ component }: Props) => {
+export const MockedRouterProvider = ({ component, initialEntry }: Props) => {
     const rootRoute = createRootRoute();
     const rootQueryRoute = createRoute({
         getParentRoute: () => rootRoute,
@@ -21,7 +22,7 @@ export const MockedRouterProvider = ({ component }: Props) => {
     });
     const routeTree = rootRoute.addChildren([rootQueryRoute]);
 
-    const history = createMemoryHistory({ initialEntries: ["/"] });
+    const history = createMemoryHistory({ initialEntries: [initialEntry ?? "/"] });
     const router = createRouter({ routeTree, history });
 
     return <RouterProvider router={router} />;

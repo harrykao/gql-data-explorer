@@ -1,4 +1,5 @@
 import React from "react";
+import { Field, View } from "../configuration";
 import { GqlObjectDef } from "../introspection";
 import { PathSpec } from "../pathSpecs";
 import { GqlObjectData } from "../types";
@@ -7,6 +8,7 @@ import Link from "./Link";
 interface GqlListProps {
     def: GqlObjectDef;
     data: readonly GqlObjectData[];
+    view: View | null;
     parentPathSpecs: readonly PathSpec[];
 }
 
@@ -20,18 +22,27 @@ export default function GqlList(props: GqlListProps) {
         return "no data";
     }
 
-    const fieldNames: string[] = [];
-    for (const k of props.def.fields.keys()) {
-        fieldNames.push(k);
+    let fieldConfigs: Field[] = [];
+
+    if (props.view) {
+        fieldConfigs = props.view.fields;
+    } else {
+        // if there's no view configured, create an "identity view"
+        props.def.fields.forEach((field, name) => {
+            fieldConfigs.push({ fieldName: name, displayName: name });
+        });
     }
 
     return (
         <table style={{ borderSpacing: "12px 2px" }}>
             <tbody>
                 <tr key="header">
-                    {fieldNames.map((key) => (
-                        <th key={key} style={{ textAlign: "left", verticalAlign: "top" }}>
-                            {key}
+                    {fieldConfigs.map((field) => (
+                        <th
+                            key={field.fieldName}
+                            style={{ textAlign: "left", verticalAlign: "top" }}
+                        >
+                            {field.displayName}
                         </th>
                     ))}
                 </tr>
@@ -41,6 +52,7 @@ export default function GqlList(props: GqlListProps) {
                         index={i}
                         def={props.def}
                         data={rowData}
+                        fieldConfigs={fieldConfigs}
                         parentPathSpecs={props.parentPathSpecs}
                     />
                 ))}
@@ -53,19 +65,26 @@ interface RowProps {
     index: number;
     def: GqlObjectDef;
     data: GqlObjectData;
+    fieldConfigs: Field[];
     parentPathSpecs: readonly PathSpec[];
 }
 
 function Row(props: RowProps) {
     const columns: React.JSX.Element[] = [];
 
-    props.def.fields.forEach((field, name) => {
+    // props.def.fields.forEach((field, name) => {
+    props.fieldConfigs.forEach((field) => {
         let content: React.JSX.Element | null = null;
+        const fieldDef = props.def.fields.get(field.fieldName);
 
-        if (props.data[name] !== undefined) {
-            content = <>{String(props.data[name])}</>;
-        } else if (field.requiresArguments) {
-            content = <>{name} (requires arguments)</>;
+        if (!fieldDef) {
+            throw new Error();
+        }
+
+        if (props.data[field.fieldName] !== undefined) {
+            content = <>{String(props.data[field.fieldName])}</>;
+        } else if (fieldDef.requiresArguments) {
+            content = <>{field.fieldName} (requires arguments)</>;
         } else {
             content = (
                 <Link
@@ -76,16 +95,16 @@ function Row(props: RowProps) {
                             null,
                             props.index,
                         ),
-                        new PathSpec(name, null, null),
+                        new PathSpec(field.fieldName, null, null),
                     ]}
-                    args={field.args}
-                    requiresArguments={field.requiresArguments}
+                    args={fieldDef.args}
+                    requiresArguments={fieldDef.requiresArguments}
                 />
             );
         }
 
         columns.push(
-            <td key={name} style={{ verticalAlign: "top" }}>
+            <td key={field.fieldName} style={{ verticalAlign: "top" }}>
                 {content}
             </td>,
         );

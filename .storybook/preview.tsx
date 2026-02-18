@@ -43,15 +43,21 @@ const preview: Preview = {
         (Story, context) => {
             const { parameters } = context;
             const config = parameters.config ? (parameters.config as Config) : { views: [] };
+            const urlPath = parameters.urlPath ? (parameters.urlPath as string) : null;
             const introspectionData = parameters.introspectionData
                 ? (parameters.introspectionData as IntrospectionQuery)
                 : getTestSchema(QUERY_BUILDER_TEST_SCHEMA);
+            const mockResponses = parameters.mockResponses
+                ? (parameters.mockResponses as MockLink.MockedResponse[])
+                : [];
 
             return (
                 <MockedConfigurationProvider config={config}>
-                    <MockedProvider mocks={[makeIntrospectionMock(introspectionData)]}>
+                    <MockedProvider
+                        mocks={[makeIntrospectionMock(introspectionData), ...mockResponses]}
+                    >
                         <IntrospectionProvider>
-                            <MockedRouterProvider component={Story} />
+                            <MockedRouterProvider component={Story} initialEntry={urlPath} />
                         </IntrospectionProvider>
                     </MockedProvider>
                 </MockedConfigurationProvider>

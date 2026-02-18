@@ -1,6 +1,9 @@
+import { gql } from "@apollo/client";
+import { MockLink } from "@apollo/client/testing";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import { Config } from "../configuration";
+import { getTestSchema } from "../test_schemas/testSchemas";
 import App from "./App";
 
 const meta = {
@@ -14,8 +17,23 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
+const TEST_SCHEMA = `
+    type Query {
+        singleObjectField: SimpleObject!
+        listField: [SimpleObject!]!
+    }
+
+    type SimpleObject {
+        field1: String!
+        field2: String!
+    }
+`;
+
 export const WithInvalidConfig: Story = {
-    parameters: { config: { views: [{ objectName: "MissingObject", fields: [] }] } as Config },
+    parameters: {
+        config: { views: [{ objectName: "MissingObject", fields: [] }] } as Config,
+        introspectionData: getTestSchema(TEST_SCHEMA),
+    },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
 
@@ -27,9 +45,13 @@ export const WithInvalidConfig: Story = {
 };
 
 export const ObjectWithNoConfig: Story = {
+    parameters: {
+        introspectionData: getTestSchema(TEST_SCHEMA),
+    },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
-        await expect(await canvas.findByText("rootField")).toBeInTheDocument();
+        await expect(await canvas.findByText("singleObjectField")).toBeInTheDocument();
+        await expect(canvas.getByText("listField")).toBeInTheDocument();
     },
 };
 
@@ -39,13 +61,111 @@ export const ObjectWithConfig: Story = {
             views: [
                 {
                     objectName: "Query",
-                    fields: [{ fieldName: "rootField", displayName: "Root Field" }],
+                    fields: [
+                        { fieldName: "singleObjectField", displayName: "Simple Object Field" },
+                    ],
                 },
             ],
         } as Config,
+        introspectionData: getTestSchema(TEST_SCHEMA),
     },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
-        await expect(await canvas.findByText("Root Field")).toBeInTheDocument();
+        await expect(await canvas.findByText("Simple Object Field")).toBeInTheDocument();
+        await expect(canvas.queryByText("listField")).not.toBeInTheDocument();
+    },
+};
+
+export const ListWithNoConfig: Story = {
+    parameters: {
+        urlPath: "/listField",
+        introspectionData: getTestSchema(TEST_SCHEMA),
+        mockResponses: [
+            {
+                request: {
+                    query: gql(`
+                        {
+                            listField {
+                                field1
+                                field2
+                                __typename
+                            }
+                        }
+                    `),
+                },
+                result: {
+                    data: {
+                        listField: [
+                            {
+                                field1: "row 1, field 1",
+                                field2: "row 1, field 2",
+                                __typename: "SimpleObject",
+                            },
+                            {
+                                field1: "row 2, field 1",
+                                field2: "row 2, field 2",
+                                __typename: "SimpleObject",
+                            },
+                        ],
+                    },
+                },
+            } as MockLink.MockedResponse,
+        ],
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await expect(await canvas.findByText("field1")).toBeInTheDocument();
+        await expect(canvas.getByText("field2")).toBeInTheDocument();
+    },
+};
+
+export const ListWithConfig: Story = {
+    parameters: {
+        config: {
+            views: [
+                {
+                    objectName: "SimpleObject",
+                    fields: [{ fieldName: "field1", displayName: "Field 1" }],
+                },
+            ],
+        } as Config,
+        urlPath: "/listField",
+        introspectionData: getTestSchema(TEST_SCHEMA),
+        mockResponses: [
+            {
+                request: {
+                    query: gql(`
+                        {
+                            listField {
+                                field1
+                                field2
+                                __typename
+                            }
+                        }
+                    `),
+                },
+                result: {
+                    data: {
+                        listField: [
+                            {
+                                field1: "row 1, field 1",
+                                field2: "row 1, field 2",
+                                __typename: "SimpleObject",
+                            },
+                            {
+                                field1: "row 2, field 1",
+                                field2: "row 2, field 2",
+                                __typename: "SimpleObject",
+                            },
+                        ],
+                    },
+                },
+            } as MockLink.MockedResponse,
+        ],
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await expect(await canvas.findByText("Field 1")).toBeInTheDocument();
+        await expect(canvas.queryByText("field2")).not.toBeInTheDocument();
     },
 };
