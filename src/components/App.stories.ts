@@ -61,9 +61,7 @@ export const ObjectWithConfig: Story = {
             views: [
                 {
                     objectName: "Query",
-                    fields: [
-                        { fieldName: "singleObjectField", displayName: "Simple Object Field" },
-                    ],
+                    fields: [{ path: ["singleObjectField"], displayName: "Simple Object Field" }],
                 },
             ],
         } as Config,
@@ -125,7 +123,7 @@ export const ListWithConfig: Story = {
             views: [
                 {
                     objectName: "SimpleObject",
-                    fields: [{ fieldName: "field1", displayName: "Field 1" }],
+                    fields: [{ path: ["field1"], displayName: "Field 1" }],
                 },
             ],
         } as Config,

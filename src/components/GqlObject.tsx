@@ -32,15 +32,15 @@ export default function GqlObject(props: Props) {
     } else {
         // if there's no view configured, create an "identity view"
         props.def.fields.forEach((field, name) => {
-            fieldConfigs.push({ fieldName: name, displayName: name });
+            fieldConfigs.push({ path: [name], displayName: name });
         });
     }
 
     const items: React.JSX.Element[] = [];
 
     fieldConfigs.forEach((fieldConfig) => {
-        const fieldDef = props.def.fields.get(fieldConfig.fieldName);
-        const dataValue = props.data[fieldConfig.fieldName];
+        const fieldDef = props.def.fields.get(fieldConfig.path[0]);
+        const dataValue = props.data[fieldConfig.path[0]];
 
         if (!fieldDef) {
             throw new Error("field not found");
@@ -50,7 +50,7 @@ export default function GqlObject(props: Props) {
         if (dataValue !== undefined) {
             const valueStr = typeof dataValue === "string" ? dataValue : "(unsupported type)";
             items.push(
-                <div key={fieldConfig.fieldName}>
+                <div key={fieldConfig.path.join(".")}>
                     {fieldConfig.displayName}: {valueStr}
                 </div>,
             );
@@ -59,12 +59,12 @@ export default function GqlObject(props: Props) {
         // objects
         else {
             items.push(
-                <div key={fieldConfig.fieldName}>
+                <div key={fieldConfig.path.join(".")}>
                     {fieldConfig.displayName}{" "}
                     <Link
                         pathSpecs={[
                             ...props.parentPathSpecs,
-                            new PathSpec(fieldConfig.fieldName, null, null),
+                            new PathSpec(fieldConfig.path[0], null, null),
                         ]}
                         args={fieldDef.args}
                         requiresArguments={fieldDef.requiresArguments}

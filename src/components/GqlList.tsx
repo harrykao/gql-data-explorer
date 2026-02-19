@@ -29,7 +29,7 @@ export default function GqlList(props: GqlListProps) {
     } else {
         // if there's no view configured, create an "identity view"
         props.def.fields.forEach((field, name) => {
-            fieldConfigs.push({ fieldName: name, displayName: name });
+            fieldConfigs.push({ path: [name], displayName: name });
         });
     }
 
@@ -39,7 +39,7 @@ export default function GqlList(props: GqlListProps) {
                 <tr key="header">
                     {fieldConfigs.map((field) => (
                         <th
-                            key={field.fieldName}
+                            key={field.path.join(".")}
                             style={{ textAlign: "left", verticalAlign: "top" }}
                         >
                             {field.displayName}
@@ -75,16 +75,16 @@ function Row(props: RowProps) {
     // props.def.fields.forEach((field, name) => {
     props.fieldConfigs.forEach((field) => {
         let content: React.JSX.Element | null = null;
-        const fieldDef = props.def.fields.get(field.fieldName);
+        const fieldDef = props.def.fields.get(field.path[0]);
 
         if (!fieldDef) {
             throw new Error();
         }
 
-        if (props.data[field.fieldName] !== undefined) {
-            content = <>{String(props.data[field.fieldName])}</>;
+        if (props.data[field.path[0]] !== undefined) {
+            content = <>{String(props.data[field.path[0]])}</>;
         } else if (fieldDef.requiresArguments) {
-            content = <>{field.fieldName} (requires arguments)</>;
+            content = <>{field.path[0]} (requires arguments)</>;
         } else {
             content = (
                 <Link
@@ -95,7 +95,7 @@ function Row(props: RowProps) {
                             null,
                             props.index,
                         ),
-                        new PathSpec(field.fieldName, null, null),
+                        new PathSpec(field.path[0], null, null),
                     ]}
                     args={fieldDef.args}
                     requiresArguments={fieldDef.requiresArguments}
@@ -104,7 +104,7 @@ function Row(props: RowProps) {
         }
 
         columns.push(
-            <td key={field.fieldName} style={{ verticalAlign: "top" }}>
+            <td key={field.path.join(".")} style={{ verticalAlign: "top" }}>
                 {content}
             </td>,
         );

@@ -10,6 +10,7 @@ const SCHEMA = `
 
     type Object {
         field: String
+        nestedObject: Object
     }
 `;
 
@@ -28,12 +29,56 @@ describe("validates config", () => {
             views: [
                 {
                     objectName: "Object",
-                    fields: [{ fieldName: "missingField", displayName: null }],
+                    fields: [{ path: ["missingField"], displayName: null }],
                 },
             ],
         };
         const introspection = new Introspection(getTestSchema(SCHEMA));
         const result = validateConfiguration(config, introspection);
         expect(result).toEqual(["Field `Object.missingField` does not exist."]);
+    });
+
+    it("succeeds when field exists", () => {
+        const config: Config = {
+            views: [
+                {
+                    objectName: "Object",
+                    fields: [{ path: ["field"], displayName: null }],
+                },
+            ],
+        };
+        const introspection = new Introspection(getTestSchema(SCHEMA));
+        const result = validateConfiguration(config, introspection);
+        expect(result).toEqual([]);
+    });
+
+    it("fails when intermediate path part is not an object", () => {
+        const config: Config = {
+            views: [
+                {
+                    objectName: "Object",
+                    fields: [{ path: ["field", "anotherField"], displayName: null }],
+                },
+            ],
+        };
+        const introspection = new Introspection(getTestSchema(SCHEMA));
+        const result = validateConfiguration(config, introspection);
+        expect(result).toEqual([
+            "Field `Object.field.anotherField` does not point to a valid field.",
+        ]);
+    });
+
+    it("succeeds with multi-part path", () => {
+        const config: Config = {
+            views: [
+                {
+                    objectName: "Object",
+                    fields: [{ path: ["nestedObject", "field"], displayName: null }],
+                },
+            ],
+        };
+        const introspection = new Introspection(getTestSchema(SCHEMA));
+        const result = validateConfiguration(config, introspection);
+        expect(result).toEqual([]);
     });
 });
