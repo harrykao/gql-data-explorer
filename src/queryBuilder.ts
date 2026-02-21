@@ -1,6 +1,7 @@
 import { gql } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
 import { getIntrospectionQuery } from "graphql";
+import { View } from "./configuration";
 import useIntrospection, {
     GqlFieldDef,
     GqlObjectDef,
@@ -127,14 +128,17 @@ export class QueryBuilder {
      * Construct a query string for the fields that don't require arguments (meaning that they
      * either don't accept arguments or all arguments have default values).
      */
-    _makeObjectQuery(object: GqlObjectDef): string {
+    _makeObjectQuery(object: GqlObjectDef, view: View | null): string {
+        // make subqueries for views
+
         const queryFields = [...object.fields.values()].filter(includeFieldInQuery);
         return `{ ${[...queryFields.map((f) => f.name), "__typename"].join(" ")} }`;
     }
 
     makeFullQuery(
         parentSpecs: readonly PathSpec[],
-        nodeType: string | null = null,
+        nodeType: string | null,
+        view: View | null,
     ): {
         request: GqlRequest;
         targetObject: GqlObjectDef;
@@ -145,7 +149,7 @@ export class QueryBuilder {
         const vars: Record<string, { value: unknown; gqlTypeStr: string }> = {};
 
         // we'll add to this string as we build the query from inside out
-        let queryStr = this._makeObjectQuery(targetObject);
+        let queryStr = this._makeObjectQuery(targetObject, view);
 
         // iterate through the objects from the leaf to the root
         let frame: _QueryFrame | undefined;
@@ -227,12 +231,17 @@ export class QueryBuilder {
     }
 }
 
-export default function useTargetObjectData(pathSpecs: PathSpec[]): {
+export default function useTargetObjectData(
+    pathSpecs: PathSpec[],
+    view: View | null,
+): {
     targetObject: GqlObjectDef;
     targetData: unknown;
 } | null {
     const introspection = useIntrospection();
 
+    // Figure out if we're starting from the root `node` field. This will be the case if the query
+    // looks like this: { node(id: ID!) { ... } }
     const isNodeQuery = introspection
         ? introspection.supportsNodeQuery() &&
           pathSpecs.length >= 1 &&
@@ -240,35 +249,30 @@ export default function useTargetObjectData(pathSpecs: PathSpec[]): {
           pathSpecs[0].args?.id !== undefined
         : null;
 
-    // if we're doing a node query, we need to get the node type
+    // If we're doing a node query, we need to determine the object type. (Which of the union of
+    // Node types does this ID point to?)
     const { data: nodeTypeData } = useQuery(
-        gql(
-            isNodeQuery
-                ? `query ($id: ID!) { node(id: $id) { __typename } }`
-                : getIntrospectionQuery(),
-        ),
+        gql(`query ($id: ID!) { node(id: $id) { __typename } }`),
         { skip: !isNodeQuery, variables: { id: pathSpecs[0]?.args?.id } },
     );
 
-    // we're ready to query the target object if:
+    // We're ready to query the target object if:
     const readyToQueryTargetObject =
         introspection && // we've performed the introspection query
         isNodeQuery !== null && // we've determined whether this is a node query
         !(isNodeQuery && !nodeTypeData); // we're not waiting for the node type if it's a node query
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const nodeType: string | null = readyToQueryTargetObject
-        ? nodeTypeData
-            ? // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-              nodeTypeData.node.__typename
-            : null
-        : null;
+    // Extract the object type if we're doing a node query. This will be null if (1) we're not
+    // doing a node query or (2) we haven't yet finished the query that tells us the object type.
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+    const nodeType: string | null = nodeTypeData ? (nodeTypeData as any).node.__typename : null;
 
     const queryBuilder = introspection ? new QueryBuilder(introspection) : null;
     const { request: gqlQueryRequest, targetObject } =
         readyToQueryTargetObject && queryBuilder
-            ? queryBuilder.makeFullQuery(pathSpecs, nodeType)
+            ? queryBuilder.makeFullQuery(pathSpecs, nodeType, view)
             : { request: null, targetObject: null };
+
     const { data: fullData } = useQuery(
         gql(gqlQueryRequest ? gqlQueryRequest.queryStr : getIntrospectionQuery()),
         { skip: !targetObject, variables: gqlQueryRequest?.vars ?? undefined },
