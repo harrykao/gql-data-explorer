@@ -14,7 +14,7 @@ interface GqlDataProps {
 }
 
 function GqlData(props: GqlDataProps) {
-    const queryResult = useTargetObjectData(props.pathSpecs);
+    const queryResult = useTargetObjectData(props.pathSpecs, null);
 
     if (queryResult === null) {
         return null;

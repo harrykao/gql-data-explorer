@@ -37,17 +37,19 @@ interface GqlRequest {
 }
 
 /**
- * Represents a "frame", or an edge, in the graph query.
+ * A GQL query identifies the subset of the object graph that should be fetched. We'll model the
+ * query in memory as a graph. Each node knows how to serialize itself to a string, and these
+ * strings can be composed to obtain the entire GQL query.
  */
-interface _QueryFrame {
+class QueryNode {
     /**
-     * PathSpec corresponding to this frame.
+     * PathSpec corresponding to this node.
      *
      * Qualifiers like arguments and the array index are obtained from the PathSpec.
      *
      * This will be null for the root object.
      */
-    pathSpec: PathSpec | null;
+    pathSpec: PathSpec;
 
     /**
      * Object definition for the parent.
@@ -56,12 +58,118 @@ interface _QueryFrame {
      *
      * This will be null for the root object.
      */
-    parentGqlObject: GqlObjectDef | null;
+    parentGqlObject: GqlObjectDef;
 
     /**
-     * The type when this frame correspondse to the node query.
+     * The type when this frame corresponds to the node query.
+     *
+     * This will be null for all non-node fields.
      */
     nodeType: string | null;
+
+    children: QueryNode[];
+
+    constructor(pathSpec: PathSpec, parentGqlObject: GqlObjectDef, nodeType: string | null) {
+        this.pathSpec = pathSpec;
+        this.parentGqlObject = parentGqlObject;
+        this.nodeType = nodeType;
+        this.children = [];
+    }
+
+    toGqlString(vars: Record<string, { value: unknown; gqlTypeStr: string }>): string {
+        // set the GQL string to the field name to start; we may modify this later
+        let gqlStr = this.pathSpec.fieldName;
+
+        // add args if we have any
+        if (this.pathSpec.args && Object.keys(this.pathSpec.args).length) {
+            const args = this.pathSpec.args;
+
+            // make a list of [arg name, var name] tuples
+            const argAndVarNames = Object.keys(args).map((argName) => {
+                const varNum = Object.keys(vars).length;
+                const varName = `var${String(varNum)}`;
+
+                // find the argument definition in order to determin the arg's type
+                const field = this.parentGqlObject.fields.get(this.pathSpec.fieldName);
+                if (!field) {
+                    throw new FieldNotFoundError(this.pathSpec.fieldName);
+                }
+                const arg = field.args.find((a) => a.name === argName);
+                if (!arg) {
+                    throw new ArgNotFoundError();
+                }
+
+                // save the value (to return for use in the query) and the GQL type string (for
+                // constructing the query)
+                vars[varName] = {
+                    value: args[argName],
+                    gqlTypeStr: makeTypeStrFromDef(arg.type),
+                };
+                return [argName, varName] as const;
+            });
+
+            // append the args to the field name
+            const argsStr = argAndVarNames
+                .map(([argName, varName]) => `${argName}: $${varName}`)
+                .join(", ");
+            gqlStr = `${gqlStr}(${argsStr})`;
+        }
+
+        // If there are children, serialize them and wrap in braces. How this gets appended to the
+        // GQL string depends on whether we're doing a Node query. (Since the Node interface is a
+        // union of multiple types, we use an inline fragment.)
+        const childGql = this.children.length
+            ? `{ ${this.children.map((c) => c.toGqlString(vars)).join(" ")} }`
+            : null;
+
+        if (this.nodeType) {
+            return `${gqlStr} { ... on ${this.nodeType} ${childGql ?? ""} }`;
+        } else {
+            return childGql ? `${gqlStr} ${childGql}` : gqlStr;
+        }
+    }
+}
+
+/**
+ * The root of a query tree.
+ */
+class QueryTree {
+    children: QueryNode[];
+
+    constructor(children: QueryNode[]) {
+        this.children = children;
+    }
+
+    toGqlRequest(): GqlRequest {
+        // keep track of variables that we're using in the query
+        const vars: Record<string, { value: unknown; gqlTypeStr: string }> = {};
+
+        let queryStr = `{ ${this.children.map((c) => c.toGqlString(vars)).join(" ")} }`;
+
+        // Make a new dict mapping variable names to variable values. This will
+        // be passed to the GQL query.
+        let query_vars: Record<string, unknown> | null = null;
+        if (Object.keys(vars).length) {
+            query_vars = {};
+            for (const varName of Object.keys(vars)) {
+                query_vars[varName] = vars[varName].value;
+            }
+        }
+
+        // add variable definitions
+        if (Object.keys(vars).length) {
+            const varDefStr = Object.keys(vars)
+                .map((varName) => {
+                    const type = vars[varName].gqlTypeStr;
+                    return `$${varName}: ${type}`;
+                })
+                .join(", ");
+            queryStr = `(${varDefStr}) ${queryStr}`;
+        }
+        queryStr = `query ${queryStr}`;
+
+        return { queryStr, vars: query_vars };
+    }
 }
 
 export class QueryBuilder {
@@ -71,17 +179,11 @@ export class QueryBuilder {
         this.introspection = introspection;
     }
 
-    _make_frames(
+    _make_predecessor_query_tree(
         pathSpecs: readonly PathSpec[],
         nodeType: string | null,
-    ): { frames: _QueryFrame[]; targetObject: GqlObjectDef } {
-        const frames: _QueryFrame[] = [
-            {
-                pathSpec: null,
-                parentGqlObject: null,
-                nodeType: null,
-            },
-        ];
+    ): { queryTree: QueryTree; targetQueryNode: QueryNode; targetObject: GqlObjectDef } {
+        const queryNodes: QueryNode[] = [];
 
         // The GQL object corresponding to the frame that we just added to the array. When we're
         // done iterating through the path specs, this will be the ultimate object that we're
@@ -89,28 +191,21 @@ export class QueryBuilder {
         let currentObject = this.introspection.getRootObject();
 
         pathSpecs.forEach((spec, i) => {
+            let newNode: QueryNode;
+
             // node query
             if (i === 0 && spec.fieldName === "node" && this.introspection.supportsNodeQuery()) {
                 if (nodeType === null) {
                     throw new MissingNodeTypeError();
                 }
 
-                frames.push({
-                    pathSpec: spec,
-                    parentGqlObject: currentObject,
-                    nodeType: nodeType,
-                });
-
+                newNode = new QueryNode(spec, currentObject, nodeType);
                 currentObject = this.introspection.getObjectByTypeName(nodeType);
             }
 
             // everything else
             else {
-                frames.push({
-                    pathSpec: spec,
-                    parentGqlObject: currentObject,
-                    nodeType: null,
-                });
+                newNode = new QueryNode(spec, currentObject, null);
 
                 const field = currentObject.fields.get(spec.fieldName);
                 if (!field) {
@@ -119,9 +214,35 @@ export class QueryBuilder {
                     currentObject = this.introspection.getObjectByTypeName(field.type.name);
                 }
             }
+
+            if (queryNodes.length) {
+                queryNodes[queryNodes.length - 1].children.push(newNode);
+            }
+
+            queryNodes.push(newNode);
         });
 
-        return { frames, targetObject: currentObject };
+        const queryTree = new QueryTree(queryNodes.length ? [queryNodes[0]] : []);
+
+        // We need to create nodes for the queryable fields to the current object. These should be
+        // added to the innermost `QueryNode` if one exists, or the `QueryTree` otherwise. (In the
+        // latter case we must be querying the root object.)
+        const terminalParent = queryNodes.length ? queryNodes[queryNodes.length - 1] : queryTree;
+        const queryFields = [...currentObject.fields.values()].filter(includeFieldInQuery);
+        queryFields.forEach((qf) => {
+            terminalParent.children.push(
+                new QueryNode(new PathSpec(qf.name, null, null), currentObject, null),
+            );
+        });
+        terminalParent.children.push(
+            new QueryNode(new PathSpec("__typename", null, null), currentObject, null),
+        );
+
+        return {
+            queryTree,
+            targetQueryNode: queryNodes[queryNodes.length - 1],
+            targetObject: currentObject,
+        };
     }
 
     /**
@@ -143,91 +264,12 @@ export class QueryBuilder {
         request: GqlRequest;
         targetObject: GqlObjectDef;
     } {
-        const { frames, targetObject } = this._make_frames(parentSpecs, nodeType);
+        const { queryTree, targetQueryNode, targetObject } = this._make_predecessor_query_tree(
+            parentSpecs,
+            nodeType,
+        );
 
-        // keep track of variables that we're using in the query
-        const vars: Record<string, { value: unknown; gqlTypeStr: string }> = {};
-
-        // we'll add to this string as we build the query from inside out
-        let queryStr = this._makeObjectQuery(targetObject, view);
-
-        // iterate through the objects from the leaf to the root
-        let frame: _QueryFrame | undefined;
-        while ((frame = frames.pop())) {
-            const { pathSpec, parentGqlObject, nodeType } = frame;
-
-            // if we haven't reached the root, add the field name/arguments
-            if (pathSpec && parentGqlObject) {
-                let fieldStr = pathSpec.fieldName;
-
-                // add args if we have any
-                if (pathSpec.args && Object.keys(pathSpec.args).length) {
-                    const args = pathSpec.args;
-
-                    // make a list of [arg name, var name] tuples
-                    const argAndVarNames = Object.keys(args).map((argName) => {
-                        const varNum = Object.keys(vars).length;
-                        const varName = `var${String(varNum)}`;
-
-                        // find the argument definition in order to determin the arg's type
-                        const field = parentGqlObject.fields.get(pathSpec.fieldName);
-                        if (!field) {
-                            throw new FieldNotFoundError(pathSpec.fieldName);
-                        }
-                        const arg = field.args.find((a) => a.name === argName);
-                        if (!arg) {
-                            throw new ArgNotFoundError();
-                        }
-
-                        // save the value (to return for use in the query) and
-                        // the GQL type string (for constructing the query)
-                        vars[varName] = {
-                            value: args[argName],
-                            gqlTypeStr: makeTypeStrFromDef(arg.type),
-                        };
-                        return [argName, varName] as const;
-                    });
-
-                    // append the args to the field name
-                    const argsStr = argAndVarNames
-                        .map(([argName, varName]) => `${argName}: $${varName}`)
-                        .join(", ");
-                    fieldStr = `${fieldStr}(${argsStr})`;
-                }
-
-                if (nodeType) {
-                    queryStr = `{ ${fieldStr} { ... on ${nodeType} ${queryStr} } }`;
-                } else {
-                    queryStr = `{ ${fieldStr} ${queryStr} }`;
-                }
-            }
-
-            // root
-            else {
-                // add variable definitions
-                if (Object.keys(vars).length) {
-                    const varDefStr = Object.keys(vars)
-                        .map((varName) => {
-                            const type = vars[varName].gqlTypeStr;
-                            return `$${varName}: ${type}`;
-                        })
-                        .join(", ");
-                    queryStr = `(${varDefStr}) ${queryStr}`;
-                }
-                queryStr = `query ${queryStr}`;
-            }
-        }
-
-        // Make a new dict mapping variable names to variable values. This will
-        // be passed to the GQL query.
-        let query_vars: Record<string, unknown> | null = null;
-        if (Object.keys(vars).length) {
-            query_vars = {};
-            for (const varName of Object.keys(vars)) {
-                query_vars[varName] = vars[varName].value;
-            }
-        }
-        return { request: { queryStr, vars: query_vars }, targetObject };
+        return { request: queryTree.toGqlRequest(), targetObject };
     }
 }
 
