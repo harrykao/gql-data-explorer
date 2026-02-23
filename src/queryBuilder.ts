@@ -1,7 +1,7 @@
 import { gql } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
 import { getIntrospectionQuery } from "graphql";
-import { View } from "./configuration";
+import { Config, Field, View } from "./configuration";
 import useIntrospection, {
     GqlFieldDef,
     GqlObjectDef,
@@ -31,6 +31,17 @@ function includeFieldInQuery(field: GqlFieldDef): boolean {
     return true;
 }
 
+function makeIdentityView(gqlObject: GqlObjectDef): View {
+    const fieldConfigs: Field[] = [];
+    gqlObject.fields.forEach((field, name) => {
+        fieldConfigs.push({ path: [name], displayName: name });
+    });
+    return {
+        objectName: gqlObject.name,
+        fields: fieldConfigs,
+    };
+}
+
 interface GqlRequest {
     queryStr: string;
     vars: Record<string, unknown> | null;
@@ -52,6 +63,11 @@ class QueryNode {
     pathSpec: PathSpec;
 
     /**
+     * Object definition for this node, if it corresponds to a GQL object.
+     */
+    gqlObject: GqlObjectDef | null;
+
+    /**
      * Object definition for the parent.
      *
      * Needed to look up field definitions to get the types that are used when declaring variables.
@@ -69,8 +85,14 @@ class QueryNode {
 
     children: QueryNode[];
 
-    constructor(pathSpec: PathSpec, parentGqlObject: GqlObjectDef, nodeType: string | null) {
+    constructor(
+        pathSpec: PathSpec,
+        gqlObject: GqlObjectDef | null,
+        parentGqlObject: GqlObjectDef,
+        nodeType: string | null,
+    ) {
         this.pathSpec = pathSpec;
+        this.gqlObject = gqlObject;
         this.parentGqlObject = parentGqlObject;
         this.nodeType = nodeType;
         this.children = [];
@@ -182,16 +204,21 @@ export class QueryBuilder {
     _make_predecessor_query_tree(
         pathSpecs: readonly PathSpec[],
         nodeType: string | null,
-    ): { queryTree: QueryTree; targetQueryNode: QueryNode; targetObject: GqlObjectDef } {
+    ): {
+        queryTree: QueryTree;
+        targetQueryObject: QueryNode | QueryTree;
+        targetGqlObject: GqlObjectDef;
+    } {
         const queryNodes: QueryNode[] = [];
 
         // The GQL object corresponding to the frame that we just added to the array. When we're
         // done iterating through the path specs, this will be the ultimate object that we're
         // querying.
-        let currentObject = this.introspection.getRootObject();
+        let currentGqlObject = this.introspection.getRootObject();
 
         pathSpecs.forEach((spec, i) => {
             let newNode: QueryNode;
+            let newGqlObject: GqlObjectDef;
 
             // node query
             if (i === 0 && spec.fieldName === "node" && this.introspection.supportsNodeQuery()) {
@@ -199,20 +226,19 @@ export class QueryBuilder {
                     throw new MissingNodeTypeError();
                 }
 
-                newNode = new QueryNode(spec, currentObject, nodeType);
-                currentObject = this.introspection.getObjectByTypeName(nodeType);
+                newGqlObject = this.introspection.getObjectByTypeName(nodeType);
+                newNode = new QueryNode(spec, newGqlObject, currentGqlObject, nodeType);
             }
 
             // everything else
             else {
-                newNode = new QueryNode(spec, currentObject, null);
-
-                const field = currentObject.fields.get(spec.fieldName);
+                const field = currentGqlObject.fields.get(spec.fieldName);
                 if (!field) {
                     throw new FieldNotFoundError(spec.fieldName);
-                } else {
-                    currentObject = this.introspection.getObjectByTypeName(field.type.name);
                 }
+
+                newGqlObject = this.introspection.getObjectByTypeName(field.type.name);
+                newNode = new QueryNode(spec, newGqlObject, currentGqlObject, null);
             }
 
             if (queryNodes.length) {
@@ -220,65 +246,80 @@ export class QueryBuilder {
             }
 
             queryNodes.push(newNode);
+            currentGqlObject = newGqlObject;
         });
 
         const queryTree = new QueryTree(queryNodes.length ? [queryNodes[0]] : []);
 
-        // We need to create nodes for the queryable fields to the current object. These should be
-        // added to the innermost `QueryNode` if one exists, or the `QueryTree` otherwise. (In the
-        // latter case we must be querying the root object.)
-        const terminalParent = queryNodes.length ? queryNodes[queryNodes.length - 1] : queryTree;
-        const queryFields = [...currentObject.fields.values()].filter(includeFieldInQuery);
-        queryFields.forEach((qf) => {
-            terminalParent.children.push(
-                new QueryNode(new PathSpec(qf.name, null, null), currentObject, null),
-            );
-        });
-        terminalParent.children.push(
-            new QueryNode(new PathSpec("__typename", null, null), currentObject, null),
-        );
-
         return {
             queryTree,
-            targetQueryNode: queryNodes[queryNodes.length - 1],
-            targetObject: currentObject,
+            targetQueryObject: queryNodes.length ? queryNodes[queryNodes.length - 1] : queryTree,
+            targetGqlObject: currentGqlObject,
         };
     }
 
-    /**
-     * Construct a query string for the fields that don't require arguments (meaning that they
-     * either don't accept arguments or all arguments have default values).
-     */
-    _makeObjectQuery(object: GqlObjectDef, view: View | null): string {
-        // make subqueries for views
+    _make_query_tree(
+        parentSpecs: readonly PathSpec[],
+        nodeType: string | null,
+        config: Config,
+    ): { queryTree: QueryTree; targetGqlObject: GqlObjectDef; view: View } {
+        const { queryTree, targetQueryObject, targetGqlObject } = this._make_predecessor_query_tree(
+            parentSpecs,
+            nodeType,
+        );
 
-        const queryFields = [...object.fields.values()].filter(includeFieldInQuery);
-        return `{ ${[...queryFields.map((f) => f.name), "__typename"].join(" ")} }`;
+        // see if there's a matching view
+        const viewsByObjectName = new Map<string, View>();
+        config.views.forEach((v) => {
+            viewsByObjectName.set(v.objectName, v);
+        });
+        const view: View =
+            viewsByObjectName.get(targetGqlObject.name) ?? makeIdentityView(targetGqlObject);
+
+        // We need to create nodes for the queryable fields on the current object. These should be
+        // added to the innermost `QueryNode` if one exists, or the `QueryTree` otherwise. (In the
+        // latter case we must be querying the root object.)
+        view.fields.forEach((f) => {
+            const gqlField = targetGqlObject.fields.get(f.path[0]);
+            if (gqlField && includeFieldInQuery(gqlField)) {
+                targetQueryObject.children.push(
+                    new QueryNode(
+                        new PathSpec(f.path[f.path.length - 1], null, null),
+                        null,
+                        targetGqlObject,
+                        null,
+                    ),
+                );
+            }
+        });
+        targetQueryObject.children.push(
+            new QueryNode(new PathSpec("__typename", null, null), null, targetGqlObject, null),
+        );
+
+        return { queryTree, targetGqlObject, view };
     }
 
     makeFullQuery(
         parentSpecs: readonly PathSpec[],
         nodeType: string | null,
-        view: View | null,
-    ): {
-        request: GqlRequest;
-        targetObject: GqlObjectDef;
-    } {
-        const { queryTree, targetQueryNode, targetObject } = this._make_predecessor_query_tree(
-            parentSpecs,
-            nodeType,
-        );
-
-        return { request: queryTree.toGqlRequest(), targetObject };
+        config: Config,
+    ): { request: GqlRequest; targetObject: GqlObjectDef; view: View } {
+        const {
+            queryTree,
+            targetGqlObject: targetObject,
+            view,
+        } = this._make_query_tree(parentSpecs, nodeType, config);
+        return { request: queryTree.toGqlRequest(), targetObject, view };
     }
 }
 
 export default function useTargetObjectData(
     pathSpecs: PathSpec[],
-    view: View | null,
+    config: Config,
 ): {
     targetObject: GqlObjectDef;
     targetData: unknown;
+    view: View;
 } | null {
     const introspection = useIntrospection();
 
@@ -310,10 +351,13 @@ export default function useTargetObjectData(
     const nodeType: string | null = nodeTypeData ? (nodeTypeData as any).node.__typename : null;
 
     const queryBuilder = introspection ? new QueryBuilder(introspection) : null;
-    const { request: gqlQueryRequest, targetObject } =
-        readyToQueryTargetObject && queryBuilder
-            ? queryBuilder.makeFullQuery(pathSpecs, nodeType, view)
-            : { request: null, targetObject: null };
+    const {
+        request: gqlQueryRequest,
+        targetObject,
+        view,
+    } = readyToQueryTargetObject && queryBuilder
+        ? queryBuilder.makeFullQuery(pathSpecs, nodeType, config)
+        : { request: null, targetObject: null };
 
     const { data: fullData } = useQuery(
         gql(gqlQueryRequest ? gqlQueryRequest.queryStr : getIntrospectionQuery()),
@@ -352,5 +396,5 @@ export default function useTargetObjectData(
         }
     });
 
-    return { targetObject, targetData };
+    return { targetObject, targetData, view };
 }

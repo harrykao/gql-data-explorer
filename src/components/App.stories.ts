@@ -136,7 +136,6 @@ export const ListWithConfig: Story = {
                         {
                             listField {
                                 field1
-                                field2
                                 __typename
                             }
                         }

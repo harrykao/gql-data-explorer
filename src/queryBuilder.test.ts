@@ -15,7 +15,7 @@ describe("makes query", () => {
     });
 
     it("queries root object", () => {
-        const { request } = queryBuilder.makeFullQuery([], null, null);
+        const { request } = queryBuilder.makeFullQuery([], null, { views: [] });
         expect(request).toEqual({
             queryStr: "query { __typename }",
             vars: null,
@@ -26,7 +26,7 @@ describe("makes query", () => {
         const { request } = queryBuilder.makeFullQuery(
             [new PathSpec("rootField", null, null)],
             null,
-            null,
+            { views: [] },
         );
         expect(request).toEqual({
             queryStr: "query { rootField { stringField __typename } }",
@@ -38,7 +38,7 @@ describe("makes query", () => {
         const { request } = queryBuilder.makeFullQuery(
             [new PathSpec("rootField", { foo: "bar", bar: "baz" }, null)],
             null,
-            null,
+            { views: [] },
         );
         expect(request).toEqual({
             queryStr:
@@ -57,7 +57,7 @@ describe("makes query", () => {
             const { request } = queryBuilder.makeFullQuery(
                 [new PathSpec("node", { id: "NODE_ID" }, null)],
                 "MyType",
-                null,
+                { views: [] },
             );
             expect(request).toEqual({
                 queryStr:

@@ -1,6 +1,6 @@
 import { useParams } from "@tanstack/react-router";
 import React from "react";
-import useConfiguration, { Config, validateConfiguration, View } from "../configuration";
+import useConfiguration, { Config, validateConfiguration } from "../configuration";
 import useIntrospection from "../introspection";
 import { parseUrlPath, PathSpec } from "../pathSpecs";
 import useTargetObjectData from "../queryBuilder";
@@ -14,20 +14,13 @@ interface GqlDataProps {
 }
 
 function GqlData(props: GqlDataProps) {
-    const queryResult = useTargetObjectData(props.pathSpecs, null);
+    const queryResult = useTargetObjectData(props.pathSpecs, props.config);
 
     if (queryResult === null) {
         return null;
     }
 
-    const { targetObject, targetData } = queryResult;
-
-    // see if there's a matching view
-    const viewsByObjectName = new Map<string, View>();
-    props.config.views.forEach((v) => {
-        viewsByObjectName.set(v.objectName, v);
-    });
-    const view = viewsByObjectName.get(targetObject.name) ?? null;
+    const { targetObject, targetData, view } = queryResult;
 
     if (Array.isArray(targetData)) {
         return (
