@@ -18,6 +18,7 @@ export const ScalarField: Story = {
     parameters: { introspectionData: getTestSchema(NO_NODE_SCHEMA) },
     args: {
         def: {
+            name: "MyType",
             description: "Object description.",
             fields: new Map([
                 [
@@ -41,6 +42,10 @@ export const ScalarField: Story = {
         data: {
             __typename: "MyType",
             scalarField: "a scalar value",
+        },
+        view: {
+            objectName: "MyType",
+            fields: [{ path: ["scalarField"], displayName: "scalarField" }],
         },
         parentPathSpecs: [],
     },
@@ -56,6 +61,7 @@ export const ScalarFieldWithNodeQuery: Story = {
     parameters: { introspectionData: getTestSchema(NODE_SCHEMA) },
     args: {
         def: {
+            name: "MyType",
             description: "Object description.",
             fields: new Map([
                 [
@@ -79,6 +85,10 @@ export const ScalarFieldWithNodeQuery: Story = {
         data: {
             __typename: "MyType",
             scalarField: "a scalar value",
+        },
+        view: {
+            objectName: "MyType",
+            fields: [{ path: ["scalarField"], displayName: "scalarField" }],
         },
         parentPathSpecs: [],
     },
