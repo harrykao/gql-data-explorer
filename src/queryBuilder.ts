@@ -201,6 +201,9 @@ export class QueryBuilder {
         this.introspection = introspection;
     }
 
+    /**
+     * Make query nodes for the path from the root to the target object.
+     */
     _make_predecessor_query_tree(
         pathSpecs: readonly PathSpec[],
         nodeType: string | null,
@@ -258,6 +261,62 @@ export class QueryBuilder {
         };
     }
 
+    /**
+     * Make query nodes extending from the target object.
+     *
+     * This will include the scalar fields on the target object as well as any fields on
+     * sub-objects specified by the view.
+     */
+    _make_successor_query_nodes(
+        targetGqlObject: GqlObjectDef,
+        configField: Field,
+    ): QueryNode | null {
+        const nodes: QueryNode[] = [];
+        let currentGqlObject = targetGqlObject;
+
+        configField.path.forEach((pathPart, i) => {
+            const gqlField = currentGqlObject.fields.get(pathPart);
+            if (!gqlField) {
+                throw new FieldNotFoundError();
+            }
+
+            // all path parts except the last one should correspond to objects
+            if (i < configField.path.length - 1) {
+                const newGqlObject = this.introspection.getObjectByTypeName(gqlField.type.name);
+                nodes.push(
+                    new QueryNode(
+                        new PathSpec(pathPart, null, null),
+                        newGqlObject,
+                        currentGqlObject,
+                        null,
+                    ),
+                );
+                currentGqlObject = newGqlObject;
+            }
+
+            // the last path part should be a field on the current GQL object
+            else {
+                if (includeFieldInQuery(gqlField)) {
+                    nodes.push(
+                        new QueryNode(
+                            new PathSpec(pathPart, null, null),
+                            null,
+                            currentGqlObject,
+                            null,
+                        ),
+                    );
+                }
+            }
+
+            // link the new node to its parent
+            if (nodes.length >= 2) {
+                nodes[nodes.length - 2].children.push(nodes[nodes.length - 1]);
+            }
+        });
+
+        return nodes.length ? nodes[0] : null;
+    }
+
     _make_query_tree(
         parentSpecs: readonly PathSpec[],
         nodeType: string | null,
@@ -280,16 +339,9 @@ export class QueryBuilder {
         // added to the innermost `QueryNode` if one exists, or the `QueryTree` otherwise. (In the
         // latter case we must be querying the root object.)
         view.fields.forEach((f) => {
-            const gqlField = targetGqlObject.fields.get(f.path[0]);
-            if (gqlField && includeFieldInQuery(gqlField)) {
-                targetQueryObject.children.push(
-                    new QueryNode(
-                        new PathSpec(f.path[f.path.length - 1], null, null),
-                        null,
-                        targetGqlObject,
-                        null,
-                    ),
-                );
+            const qn = this._make_successor_query_nodes(targetGqlObject, f);
+            if (qn) {
+                targetQueryObject.children.push(qn);
             }
         });
         targetQueryObject.children.push(

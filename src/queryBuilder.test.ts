@@ -47,6 +47,28 @@ describe("makes query", () => {
         });
     });
 
+    it("constructs query with multipart config path", () => {
+        const { request } = queryBuilder.makeFullQuery(
+            [new PathSpec("rootField", { foo: "bar", bar: "baz" }, null)],
+            null,
+            {
+                views: [
+                    {
+                        objectName: "SimpleObject",
+                        fields: [
+                            { path: ["nestedObject", "stringField"], displayName: "Display Name" },
+                        ],
+                    },
+                ],
+            },
+        );
+        expect(request).toEqual({
+            queryStr:
+                "query ($var0: ID!, $var1: String) { rootField(foo: $var0, bar: $var1) { nestedObject { stringField } __typename } }",
+            vars: { var0: "bar", var1: "baz" },
+        });
+    });
+
     describe("with node query", () => {
         beforeEach(() => {
             introspection = new Introspection(getTestSchema(NODE_SCHEMA));

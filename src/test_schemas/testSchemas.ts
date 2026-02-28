@@ -36,6 +36,7 @@ export const QUERY_BUILDER_TEST_SCHEMA = `
 
     type SimpleObject {
         stringField: String!
+        nestedObject: SimpleObject!
     }
 
     input SimpleInput {
