@@ -41,7 +41,7 @@ export default function GqlObject(props: Props) {
                 </RouterLink>
             )}
             {getDisplayFields(props.def, props.data, props.view).map((displayField) => {
-                if (displayField.value !== null) {
+                if (displayField.value !== null && !displayField.fieldConfig.linkPath) {
                     return (
                         <div
                             key={displayField.fieldConfig.path
@@ -49,6 +49,27 @@ export default function GqlObject(props: Props) {
                                 .join(".")}
                         >
                             {displayField.label}: {displayField.value}
+                        </div>
+                    );
+                } else if (displayField.fieldConfig.linkPath) {
+                    return (
+                        <div
+                            key={displayField.fieldConfig.path
+                                .map((pathPart) => pathPart.str)
+                                .join(".")}
+                        >
+                            {displayField.label}:{" "}
+                            <Link
+                                pathSpecs={[
+                                    ...props.parentPathSpecs,
+                                    ...displayField.fieldConfig.linkPath.map(
+                                        (pathPart) => new PathSpec(pathPart, null, null),
+                                    ),
+                                ]}
+                                args={displayField.fieldDef.args}
+                                requiresArguments={displayField.fieldDef.requiresArguments}
+                                linkText={displayField.value ?? ""}
+                            />
                         </div>
                     );
                 } else {

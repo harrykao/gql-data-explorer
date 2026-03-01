@@ -65,10 +65,30 @@ function Row(props: RowProps) {
             {getDisplayFields(props.def, props.data, props.view).map((displayField) => {
                 let content: React.JSX.Element | null = null;
 
-                if (displayField.value) {
+                if (displayField.value !== null && !displayField.fieldConfig.linkPath) {
                     content = <>{displayField.value}</>;
                 } else if (displayField.fieldDef.requiresArguments) {
                     content = <>{displayField.fieldConfig.path[0].str} (requires arguments)</>;
+                } else if (displayField.fieldConfig.linkPath) {
+                    content = (
+                        <Link
+                            pathSpecs={[
+                                ...props.parentPathSpecs.slice(0, -1),
+                                new PathSpec(
+                                    props.parentPathSpecs[props.parentPathSpecs.length - 1]
+                                        .fieldName,
+                                    null,
+                                    props.index,
+                                ),
+                                ...displayField.fieldConfig.linkPath.map(
+                                    (pathPart) => new PathSpec(pathPart, null, null),
+                                ),
+                            ]}
+                            args={displayField.fieldDef.args}
+                            requiresArguments={displayField.fieldDef.requiresArguments}
+                            linkText={displayField.value ?? ""}
+                        />
+                    );
                 } else {
                     content = (
                         <Link

@@ -13,6 +13,7 @@ interface Props {
     pathSpecs: readonly PathSpec[];
     args: readonly GqlArgumentDef[];
     requiresArguments: boolean;
+    linkText?: string;
 }
 
 export default function Link(props: Props) {
@@ -63,10 +64,10 @@ export default function Link(props: Props) {
                                 ),
                             ]),
                         }}
-                        aria-label="query field"
-                        style={{ verticalAlign: "middle" }}
+                        aria-label={props.linkText ?? "query field"}
+                        style={props.linkText ? {} : { verticalAlign: "middle" }}
                     >
-                        <CircleArrowRight size={24} />
+                        {props.linkText ?? <CircleArrowRight size={24} />}
                     </RouterLink>
                 </div>
             </div>
@@ -96,10 +97,10 @@ export default function Link(props: Props) {
                     params={{
                         _splat: makeUrlPath(props.pathSpecs),
                     }}
-                    aria-label="query field"
-                    style={{ verticalAlign: "middle" }}
+                    aria-label={props.linkText ?? "query field"}
+                    style={props.linkText ? {} : { verticalAlign: "middle" }}
                 >
-                    <CircleArrowRight size={14} />
+                    {props.linkText ?? <CircleArrowRight size={14} />}
                 </RouterLink>
             )}
         </>

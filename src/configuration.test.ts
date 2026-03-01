@@ -87,7 +87,7 @@ describe("validates config", () => {
         const [validatedConfig, errors] = validateConfiguration(config, introspection);
         expect(validatedConfig).toBeNull();
         expect(errors).toEqual([
-            "Field `Object.field.anotherField` does not point to a valid field.",
+            "Field `Object.field.anotherField` does not point to a valid object.",
         ]);
     });
 
@@ -123,6 +123,89 @@ describe("validates config", () => {
                                 },
                             ],
                             displayName: null,
+                        },
+                    ],
+                },
+            ],
+        });
+        expect(errors).toEqual([]);
+    });
+
+    it("fails when link path field doesn't exist", () => {
+        const config: Config = {
+            views: [
+                {
+                    objectName: "Object",
+                    fields: [
+                        {
+                            path: ["field"],
+                            displayName: null,
+                            linkPath: ["missingField"],
+                        },
+                    ],
+                },
+            ],
+        };
+        const introspection = new Introspection(getTestSchema(SCHEMA));
+        const [validatedConfig, errors] = validateConfiguration(config, introspection);
+        expect(validatedConfig).toBeNull();
+        expect(errors).toEqual(["Field `Object.missingField` does not exist."]);
+    });
+
+    it("fails when link path does not point to object", () => {
+        const config: Config = {
+            views: [
+                {
+                    objectName: "Object",
+                    fields: [
+                        {
+                            path: ["field"],
+                            displayName: null,
+                            linkPath: ["field"],
+                        },
+                    ],
+                },
+            ],
+        };
+        const introspection = new Introspection(getTestSchema(SCHEMA));
+        const [validatedConfig, errors] = validateConfiguration(config, introspection);
+        expect(validatedConfig).toBeNull();
+        expect(errors).toEqual(["Field `Object.field` does not point to a valid object."]);
+    });
+
+    it("succeeds with multi-part link path", () => {
+        const config: Config = {
+            views: [
+                {
+                    objectName: "Object",
+                    fields: [
+                        {
+                            path: ["field"],
+                            displayName: null,
+                            linkPath: ["nestedObject", "nestedObject"],
+                        },
+                    ],
+                },
+            ],
+        };
+        const introspection = new Introspection(getTestSchema(SCHEMA));
+        const [validatedConfig, errors] = validateConfiguration(config, introspection);
+        expect(validatedConfig).toEqual({
+            views: [
+                {
+                    objectName: "Object",
+                    fields: [
+                        {
+                            path: [
+                                {
+                                    str: "field",
+                                    gqlField: introspection
+                                        .getObjectByTypeName("Object")
+                                        .fields.get("field"),
+                                },
+                            ],
+                            displayName: null,
+                            linkPath: ["nestedObject", "nestedObject"],
                         },
                     ],
                 },

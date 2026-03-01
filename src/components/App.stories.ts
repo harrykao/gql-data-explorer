@@ -157,6 +157,69 @@ export const ObjectWithMultiPathConfig: Story = {
     },
 };
 
+export const ObjectWithLinkPath: Story = {
+    parameters: {
+        config: {
+            views: [
+                {
+                    objectName: "Query",
+                    fields: [
+                        {
+                            path: ["singleObjectField", "nestedObject", "field1"],
+                            displayName: "Simple Object Field",
+                            linkPath: ["singleObjectField", "nestedObject"],
+                        },
+                    ],
+                },
+            ],
+        } as Config,
+        introspectionData: getTestSchema(TEST_SCHEMA),
+        mockResponses: [
+            {
+                request: {
+                    query: gql(`
+                        {
+                            singleObjectField {
+                                nestedObject {
+                                    field1
+                                    __typename
+                                }
+                                __typename
+                            }
+                            __typename
+                        }
+                    `),
+                },
+                result: {
+                    data: {
+                        singleObjectField: {
+                            nestedObject: {
+                                field1: "field 1 value",
+                                __typename: "SimpleObject",
+                            },
+                            __typename: "SimpleObject",
+                        },
+                        __typename: "Query",
+                    },
+                },
+            } as MockLink.MockedResponse,
+        ],
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        // switch to view from config
+        await userEvent.click(await canvas.findByRole("link", { name: "VIEW" }));
+
+        await expect(await canvas.findByText("Simple Object Field:")).toBeInTheDocument();
+        await expect(canvas.getByRole("link", { name: "field 1 value" })).toBeInTheDocument();
+        await expect(canvas.getByRole("link", { name: "field 1 value" })).toHaveAttribute(
+            "href",
+            "/singleObjectField/nestedObject",
+        );
+    },
+};
+
 export const ListWithNoConfig: Story = {
     parameters: {
         urlPath: "/listField",
@@ -277,5 +340,102 @@ export const ListWithConfig: Story = {
         await userEvent.click(await canvas.findByRole("link", { name: "VIEW" }));
         await expect(await canvas.findByText("Field 1")).toBeInTheDocument();
         await expect(canvas.queryByText("field2")).not.toBeInTheDocument();
+    },
+};
+
+export const ListWithLinkPath: Story = {
+    parameters: {
+        config: {
+            views: [
+                {
+                    objectName: "SimpleObject",
+                    fields: [
+                        {
+                            path: ["nestedObject", "field1"],
+                            displayName: "Field 1",
+                            linkPath: ["nestedObject"],
+                        },
+                    ],
+                },
+            ],
+        } as Config,
+        urlPath: "/listField",
+        introspectionData: getTestSchema(TEST_SCHEMA),
+        mockResponses: [
+            // request when we're using the raw view
+            {
+                request: {
+                    query: gql(`
+                        {
+                            listField {
+                                field1
+                                field2
+                                __typename
+                            }
+                        }
+                    `),
+                },
+                result: {
+                    data: {
+                        listField: [
+                            {
+                                field1: "row 1, field 1",
+                                field2: "row 1, field 2",
+                                __typename: "SimpleObject",
+                            },
+                            {
+                                field1: "row 2, field 1",
+                                field2: "row 2, field 2",
+                                __typename: "SimpleObject",
+                            },
+                        ],
+                    },
+                },
+            } as MockLink.MockedResponse,
+            // request when we're using the view from the config
+            {
+                request: {
+                    query: gql(`
+                        {
+                            listField {
+                                nestedObject {
+                                    field1
+                                    __typename
+                                }
+                                __typename
+                            }
+                        }
+                    `),
+                },
+                result: {
+                    data: {
+                        listField: [
+                            {
+                                nestedObject: {
+                                    field1: "row 1, field 1",
+                                    __typename: "SimpleObject",
+                                },
+                                __typename: "SimpleObject",
+                            },
+                            {
+                                nestedObject: {
+                                    field1: "row 2, field 1",
+                                    __typename: "SimpleObject",
+                                },
+                                __typename: "SimpleObject",
+                            },
+                        ],
+                    },
+                },
+            } as MockLink.MockedResponse,
+        ],
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.click(await canvas.findByRole("link", { name: "VIEW" }));
+        await expect(
+            await canvas.findByRole("link", { name: "row 1, field 1" }),
+        ).toBeInTheDocument();
+        await expect(canvas.getByRole("link", { name: "row 2, field 1" })).toBeInTheDocument();
     },
 };

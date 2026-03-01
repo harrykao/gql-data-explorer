@@ -13,6 +13,7 @@ export interface View {
 export interface Field {
     path: string[];
     displayName: string | null;
+    linkPath?: string[];
 }
 
 export interface ValidatedConfig {
@@ -32,6 +33,7 @@ export interface PathPart {
 export interface ValidatedField {
     path: PathPart[];
     displayName: string | null;
+    linkPath?: string[];
 }
 
 export function validateConfiguration(
@@ -83,7 +85,11 @@ function validateField(
     gqlObject: GqlObjectDef,
     introspection: Introspection,
 ): [ValidatedField | null, string[]] {
-    const validatedField: ValidatedField = { path: [], displayName: field.displayName };
+    const validatedField: ValidatedField = {
+        path: [],
+        displayName: field.displayName,
+        linkPath: field.linkPath,
+    };
 
     if (field.path.length === 0) {
         return [null, [`A field for \`${gqlObject.name}\` has an empty path.`]];
@@ -92,6 +98,7 @@ function validateField(
     // this will be updated as we walk the graph, following `field.path`
     let targetGqlObject = gqlObject;
 
+    // validate path and populate validatedField.path
     for (const [i, pathPart] of field.path.entries()) {
         const gqlField = targetGqlObject.fields.get(pathPart);
 
@@ -105,7 +112,7 @@ function validateField(
                 return [
                     null,
                     [
-                        `Field \`${gqlObject.name}.${field.path.join(".")}\` does not point to a valid field.`,
+                        `Field \`${gqlObject.name}.${field.path.join(".")}\` does not point to a valid object.`,
                     ],
                 ];
             }
@@ -113,6 +120,31 @@ function validateField(
 
         validatedField.path.push({ str: pathPart, gqlField });
         if (i < field.path.length - 1) {
+            targetGqlObject = introspection.getObjectByTypeName(gqlField.type.name);
+        }
+    }
+
+    // validate linkPath
+    targetGqlObject = gqlObject;
+    const linkPath = field.linkPath ?? [];
+    for (const [i, pathPart] of linkPath.entries()) {
+        const gqlField = targetGqlObject.fields.get(pathPart);
+
+        if (!gqlField) {
+            return [null, [`Field \`${gqlObject.name}.${linkPath.join(".")}\` does not exist.`]];
+        }
+
+        // all path parts must point to objects
+        if (gqlField.type.kind !== "OBJECT") {
+            return [
+                null,
+                [
+                    `Field \`${gqlObject.name}.${field.path.join(".")}\` does not point to a valid object.`,
+                ],
+            ];
+        }
+
+        if (i < linkPath.length - 1) {
             targetGqlObject = introspection.getObjectByTypeName(gqlField.type.name);
         }
     }
