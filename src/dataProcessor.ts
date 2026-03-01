@@ -23,7 +23,7 @@ export function getDisplayFields(
 
     return view.fields.map((fieldConfig) => {
         const fieldDef = def.fields.get(fieldConfig.path[0]);
-        const dataValue = data[fieldConfig.path[0]];
+        const dataValue = getDataValue(data, fieldConfig);
 
         if (!fieldDef) {
             throw new Error("field not found");
@@ -50,4 +50,16 @@ export function getDisplayFields(
             };
         }
     });
+}
+
+function getDataValue(data: GqlObjectData, fieldConfig: Field): unknown {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let currentValue: any = data;
+
+    fieldConfig.path.forEach((pathPart) => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        currentValue = currentValue[pathPart];
+    });
+
+    return currentValue;
 }

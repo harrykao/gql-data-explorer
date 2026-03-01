@@ -26,6 +26,7 @@ const TEST_SCHEMA = `
     type SimpleObject {
         field1: String!
         field2: String!
+        nestedObject: SimpleObject
     }
 `;
 
@@ -71,6 +72,55 @@ export const ObjectWithConfig: Story = {
         const canvas = within(canvasElement);
         await expect(await canvas.findByText("Simple Object Field")).toBeInTheDocument();
         await expect(canvas.queryByText("listField")).not.toBeInTheDocument();
+    },
+};
+
+export const ObjectWithMultiPathConfig: Story = {
+    parameters: {
+        urlPath: "/singleObjectField",
+        config: {
+            views: [
+                {
+                    objectName: "SimpleObject",
+                    fields: [
+                        { path: ["nestedObject", "field1"], displayName: "Nested Object Field 1" },
+                    ],
+                },
+            ],
+        } as Config,
+        introspectionData: getTestSchema(TEST_SCHEMA),
+        mockResponses: [
+            {
+                request: {
+                    query: gql(`
+                        {
+                            singleObjectField {
+                                nestedObject {
+                                    field1
+                                }
+                                __typename
+                            }
+                        }
+                    `),
+                },
+                result: {
+                    data: {
+                        singleObjectField: {
+                            nestedObject: {
+                                field1: "field 1 value",
+                            },
+                            __typename: "SimpleObject",
+                        },
+                    },
+                },
+            } as MockLink.MockedResponse,
+        ],
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await expect(
+            await canvas.findByText("Nested Object Field 1: field 1 value"),
+        ).toBeInTheDocument();
     },
 };
 
