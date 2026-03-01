@@ -1,5 +1,5 @@
 import { useParams } from "@tanstack/react-router";
-import React from "react";
+import React, { useState } from "react";
 import useConfiguration, { validateConfiguration, ValidatedConfig } from "../configuration";
 import useIntrospection from "../introspection";
 import { parseUrlPath, PathSpec } from "../pathSpecs";
@@ -47,6 +47,8 @@ function App() {
     const params = useParams({ from: "/$" });
     const pathSpecs = params._splat ? parseUrlPath(params._splat) : [];
 
+    const [useView, setUseView] = useState(false);
+
     const introspection = useIntrospection();
     const config = useConfiguration();
 
@@ -69,7 +71,42 @@ function App() {
         );
     }
 
-    return <GqlData config={validatedConfig} pathSpecs={pathSpecs} />;
+    const effectiveConfig = useView ? validatedConfig : { views: [] };
+
+    return (
+        <>
+            <p>
+                {useView ? (
+                    <a
+                        href="#"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            setUseView(false);
+                        }}
+                    >
+                        RAW
+                    </a>
+                ) : (
+                    <b>RAW</b>
+                )}{" "}
+                |{" "}
+                {useView ? (
+                    <b>VIEW</b>
+                ) : (
+                    <a
+                        href="#"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            setUseView(true);
+                        }}
+                    >
+                        VIEW
+                    </a>
+                )}
+            </p>
+            <GqlData config={effectiveConfig} pathSpecs={pathSpecs} />
+        </>
+    );
 }
 
 export default App;

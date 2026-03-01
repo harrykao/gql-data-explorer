@@ -1,7 +1,7 @@
 import { gql } from "@apollo/client";
 import { MockLink } from "@apollo/client/testing";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { Config } from "../configuration";
 import { getTestSchema } from "../test_schemas/testSchemas";
 import App from "./App";
@@ -70,7 +70,15 @@ export const ObjectWithConfig: Story = {
     },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
-        await expect(await canvas.findByText("Simple Object Field")).toBeInTheDocument();
+
+        // defaults to raw view
+        await expect(await canvas.findByText("singleObjectField")).toBeInTheDocument();
+        await expect(canvas.getByText("listField")).toBeInTheDocument();
+
+        // switch to view from config
+        await userEvent.click(canvas.getByRole("link", { name: "VIEW" }));
+
+        await expect(canvas.getByText("Simple Object Field")).toBeInTheDocument();
         await expect(canvas.queryByText("listField")).not.toBeInTheDocument();
     },
 };
@@ -90,6 +98,30 @@ export const ObjectWithMultiPathConfig: Story = {
         } as Config,
         introspectionData: getTestSchema(TEST_SCHEMA),
         mockResponses: [
+            // request when we're using the raw view
+            {
+                request: {
+                    query: gql(`
+                        {
+                            singleObjectField {
+                                field1
+                                field2
+                                __typename
+                            }
+                        }
+                    `),
+                },
+                result: {
+                    data: {
+                        singleObjectField: {
+                            field1: "field 1 value",
+                            field2: "field 2 value",
+                            __typename: "SimpleObject",
+                        },
+                    },
+                },
+            } as MockLink.MockedResponse,
+            // request when we're using the view from the config
             {
                 request: {
                     query: gql(`
@@ -118,6 +150,7 @@ export const ObjectWithMultiPathConfig: Story = {
     },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
+        await userEvent.click(await canvas.findByRole("link", { name: "VIEW" }));
         await expect(
             await canvas.findByText("Nested Object Field 1: field 1 value"),
         ).toBeInTheDocument();
@@ -180,12 +213,14 @@ export const ListWithConfig: Story = {
         urlPath: "/listField",
         introspectionData: getTestSchema(TEST_SCHEMA),
         mockResponses: [
+            // request when we're using the raw view
             {
                 request: {
                     query: gql(`
                         {
                             listField {
                                 field1
+                                field2
                                 __typename
                             }
                         }
@@ -208,10 +243,38 @@ export const ListWithConfig: Story = {
                     },
                 },
             } as MockLink.MockedResponse,
+            // request when we're using the view from the config
+            {
+                request: {
+                    query: gql(`
+                        {
+                            listField {
+                                field1
+                                __typename
+                            }
+                        }
+                    `),
+                },
+                result: {
+                    data: {
+                        listField: [
+                            {
+                                field1: "row 1, field 1",
+                                __typename: "SimpleObject",
+                            },
+                            {
+                                field1: "row 2, field 1",
+                                __typename: "SimpleObject",
+                            },
+                        ],
+                    },
+                },
+            } as MockLink.MockedResponse,
         ],
     },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
+        await userEvent.click(await canvas.findByRole("link", { name: "VIEW" }));
         await expect(await canvas.findByText("Field 1")).toBeInTheDocument();
         await expect(canvas.queryByText("field2")).not.toBeInTheDocument();
     },
