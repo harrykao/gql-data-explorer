@@ -48,6 +48,15 @@ describe("makes query", () => {
     });
 
     it("constructs query with multipart config path", () => {
+        const rootField = introspection.getObjectByTypeName("Query").fields.get("rootField");
+        const stringField = introspection
+            .getObjectByTypeName("SimpleObject")
+            .fields.get("stringField");
+
+        if (!rootField || !stringField) {
+            throw new Error();
+        }
+
         const { request } = queryBuilder.makeFullQuery(
             [new PathSpec("rootField", { foo: "bar", bar: "baz" }, null)],
             null,
@@ -56,7 +65,16 @@ describe("makes query", () => {
                     {
                         objectName: "SimpleObject",
                         fields: [
-                            { path: ["nestedObject", "stringField"], displayName: "Display Name" },
+                            {
+                                path: [
+                                    {
+                                        str: "nestedObject",
+                                        gqlField: rootField,
+                                    },
+                                    { str: "stringField", gqlField: stringField },
+                                ],
+                                displayName: "Display Name",
+                            },
                         ],
                     },
                 ],

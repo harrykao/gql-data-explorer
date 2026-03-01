@@ -1,9 +1,8 @@
 import { createContext, useContext } from "react";
-import { GqlObjectDef, Introspection, TypeNotFoundError } from "./introspection";
+import { GqlFieldDef, GqlObjectDef, Introspection, TypeNotFoundError } from "./introspection";
 
-export interface Field {
-    path: string[];
-    displayName: string | null;
+export interface Config {
+    views: View[];
 }
 
 export interface View {
@@ -11,45 +10,83 @@ export interface View {
     fields: Field[];
 }
 
-export interface Config {
-    views: View[];
+export interface Field {
+    path: string[];
+    displayName: string | null;
 }
 
-export function validateConfiguration(config: Config, introspection: Introspection): string[] {
+export interface ValidatedConfig {
+    views: ValidatedView[];
+}
+
+export interface ValidatedView {
+    objectName: string;
+    fields: ValidatedField[];
+}
+
+export interface PathPart {
+    str: string;
+    gqlField: GqlFieldDef;
+}
+
+export interface ValidatedField {
+    path: PathPart[];
+    displayName: string | null;
+}
+
+export function validateConfiguration(
+    config: Config,
+    introspection: Introspection,
+): [ValidatedConfig | null, string[]] {
+    const validatedConfig: ValidatedConfig = { views: [] };
     const errors: string[] = [];
+
     config.views.forEach((view) => {
-        errors.push(...validateView(view, introspection));
+        const [validatedView, newErrors] = validateView(view, introspection);
+        if (validatedView !== null) {
+            validatedConfig.views.push(validatedView);
+        }
+        errors.push(...newErrors);
     });
-    return errors;
+
+    return [errors.length == 0 ? validatedConfig : null, errors];
 }
 
-function validateView(view: View, introspection: Introspection): string[] {
+function validateView(view: View, introspection: Introspection): [ValidatedView | null, string[]] {
+    const validatedView: ValidatedView = { objectName: view.objectName, fields: [] };
+    const errors: string[] = [];
     let gqlObject: GqlObjectDef;
 
     try {
         gqlObject = introspection.getObjectByTypeName(view.objectName);
     } catch (e) {
         if (e instanceof TypeNotFoundError) {
-            return [`Type \`${view.objectName}\` does not exist.`];
+            return [null, [`Type \`${view.objectName}\` does not exist.`]];
         } else {
             throw e;
         }
     }
 
-    const errors: string[] = [];
     view.fields.forEach((f) => {
-        errors.push(...validateField(f, gqlObject, introspection));
+        const [validatedField, newErrors] = validateField(f, gqlObject, introspection);
+        if (validatedField !== null) {
+            validatedView.fields.push(validatedField);
+        }
+        errors.push(...newErrors);
     });
-    return errors;
+
+    return [validatedView, errors];
 }
 
 function validateField(
     field: Field,
     gqlObject: GqlObjectDef,
     introspection: Introspection,
-): string[] {
+): [ValidatedField | null, string[]] {
+    const validatedField: ValidatedField = { path: [], displayName: field.displayName };
+
     if (field.path.length === 0) {
-        return [`A field for \`${gqlObject.name}\` has an empty path.`];
+        return [null, [`A field for \`${gqlObject.name}\` has an empty path.`]];
     }
 
     // this will be updated as we walk the graph, following `field.path`
@@ -59,21 +96,28 @@ function validateField(
         const gqlField = targetGqlObject.fields.get(pathPart);
 
         if (!gqlField) {
-            return [`Field \`${gqlObject.name}.${field.path.join(".")}\` does not exist.`];
+            return [null, [`Field \`${gqlObject.name}.${field.path.join(".")}\` does not exist.`]];
         }
 
         // intermediate path parts must point to objects
         if (i < field.path.length - 1) {
             if (gqlField.type.kind !== "OBJECT") {
                 return [
-                    `Field \`${gqlObject.name}.${field.path.join(".")}\` does not point to a valid field.`,
+                    null,
+                    [
+                        `Field \`${gqlObject.name}.${field.path.join(".")}\` does not point to a valid field.`,
+                    ],
                 ];
             }
+        }
+
+        validatedField.path.push({ str: pathPart, gqlField });
+        if (i < field.path.length - 1) {
             targetGqlObject = introspection.getObjectByTypeName(gqlField.type.name);
         }
     }
 
-    return [];
+    return [validatedField, []];
 }
 
 export const ConfigContext = createContext<Config | null>(null);

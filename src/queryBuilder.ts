@@ -1,7 +1,7 @@
 import { gql } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
 import { getIntrospectionQuery } from "graphql";
-import { Config, Field, View } from "./configuration";
+import { ValidatedConfig, ValidatedField, ValidatedView } from "./configuration";
 import useIntrospection, {
     GqlFieldDef,
     GqlObjectDef,
@@ -31,10 +31,13 @@ function includeFieldInQuery(field: GqlFieldDef): boolean {
     return true;
 }
 
-function makeIdentityView(gqlObject: GqlObjectDef): View {
-    const fieldConfigs: Field[] = [];
+function makeIdentityView(gqlObject: GqlObjectDef): ValidatedView {
+    const fieldConfigs: ValidatedField[] = [];
     gqlObject.fields.forEach((field, name) => {
-        fieldConfigs.push({ path: [name], displayName: name });
+        fieldConfigs.push({
+            path: [{ str: name, gqlField: field }],
+            displayName: name,
+        });
     });
     return {
         objectName: gqlObject.name,
@@ -269,13 +272,13 @@ export class QueryBuilder {
      */
     _make_successor_query_nodes(
         targetGqlObject: GqlObjectDef,
-        configField: Field,
+        configField: ValidatedField,
     ): QueryNode | null {
         const nodes: QueryNode[] = [];
         let currentGqlObject = targetGqlObject;
 
         configField.path.forEach((pathPart, i) => {
-            const gqlField = currentGqlObject.fields.get(pathPart);
+            const gqlField = currentGqlObject.fields.get(pathPart.str);
             if (!gqlField) {
                 throw new FieldNotFoundError();
             }
@@ -285,7 +288,7 @@ export class QueryBuilder {
                 const newGqlObject = this.introspection.getObjectByTypeName(gqlField.type.name);
                 nodes.push(
                     new QueryNode(
-                        new PathSpec(pathPart, null, null),
+                        new PathSpec(pathPart.str, null, null),
                         newGqlObject,
                         currentGqlObject,
                         null,
@@ -299,7 +302,7 @@ export class QueryBuilder {
                 if (includeFieldInQuery(gqlField)) {
                     nodes.push(
                         new QueryNode(
-                            new PathSpec(pathPart, null, null),
+                            new PathSpec(pathPart.str, null, null),
                             null,
                             currentGqlObject,
                             null,
@@ -320,19 +323,19 @@ export class QueryBuilder {
     _make_query_tree(
         parentSpecs: readonly PathSpec[],
         nodeType: string | null,
-        config: Config,
-    ): { queryTree: QueryTree; targetGqlObject: GqlObjectDef; view: View } {
+        config: ValidatedConfig,
+    ): { queryTree: QueryTree; targetGqlObject: GqlObjectDef; view: ValidatedView } {
         const { queryTree, targetQueryObject, targetGqlObject } = this._make_predecessor_query_tree(
             parentSpecs,
             nodeType,
         );
 
         // see if there's a matching view
-        const viewsByObjectName = new Map<string, View>();
+        const viewsByObjectName = new Map<string, ValidatedView>();
         config.views.forEach((v) => {
             viewsByObjectName.set(v.objectName, v);
         });
-        const view: View =
+        const view: ValidatedView =
             viewsByObjectName.get(targetGqlObject.name) ?? makeIdentityView(targetGqlObject);
 
         // We need to create nodes for the queryable fields on the current object. These should be
@@ -354,8 +357,8 @@ export class QueryBuilder {
     makeFullQuery(
         parentSpecs: readonly PathSpec[],
         nodeType: string | null,
-        config: Config,
-    ): { request: GqlRequest; targetObject: GqlObjectDef; view: View } {
+        config: ValidatedConfig,
+    ): { request: GqlRequest; targetObject: GqlObjectDef; view: ValidatedView } {
         const {
             queryTree,
             targetGqlObject: targetObject,
@@ -367,11 +370,11 @@ export class QueryBuilder {
 
 export default function useTargetObjectData(
     pathSpecs: PathSpec[],
-    config: Config,
+    config: ValidatedConfig,
 ): {
     targetObject: GqlObjectDef;
     targetData: unknown;
-    view: View;
+    view: ValidatedView;
 } | null {
     const introspection = useIntrospection();
 

@@ -1,7 +1,7 @@
 import { Link as RouterLink } from "@tanstack/react-router";
 import { Link as LinkIcon } from "lucide-react";
 import React from "react";
-import { View } from "../configuration";
+import { ValidatedView } from "../configuration";
 import { getDisplayFields } from "../dataProcessor";
 import useIntrospection, { GqlObjectDef } from "../introspection";
 import { makeUrlPath, PathSpec } from "../pathSpecs";
@@ -11,7 +11,7 @@ import Link from "./Link";
 interface Props {
     def: GqlObjectDef;
     data: GqlObjectData;
-    view: View;
+    view: ValidatedView;
     parentPathSpecs: readonly PathSpec[];
 }
 
@@ -43,18 +43,26 @@ export default function GqlObject(props: Props) {
             {getDisplayFields(props.def, props.data, props.view).map((displayField) => {
                 if (displayField.value !== null) {
                     return (
-                        <div key={displayField.fieldConfig.path.join(".")}>
+                        <div
+                            key={displayField.fieldConfig.path
+                                .map((pathPart) => pathPart.str)
+                                .join(".")}
+                        >
                             {displayField.label}: {displayField.value}
                         </div>
                     );
                 } else {
                     return (
-                        <div key={displayField.fieldConfig.path.join(".")}>
+                        <div
+                            key={displayField.fieldConfig.path
+                                .map((pathPart) => pathPart.str)
+                                .join(".")}
+                        >
                             {displayField.label}{" "}
                             <Link
                                 pathSpecs={[
                                     ...props.parentPathSpecs,
-                                    new PathSpec(displayField.fieldConfig.path[0], null, null),
+                                    new PathSpec(displayField.fieldConfig.path[0].str, null, null),
                                 ]}
                                 args={displayField.fieldDef.args}
                                 requiresArguments={displayField.fieldDef.requiresArguments}

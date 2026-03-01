@@ -45,7 +45,29 @@ export const ScalarField: Story = {
         },
         view: {
             objectName: "MyType",
-            fields: [{ path: ["scalarField"], displayName: "scalarField" }],
+            fields: [
+                {
+                    path: [
+                        {
+                            str: "scalarField",
+                            gqlField: {
+                                name: "scalarField",
+                                description: "A field.",
+                                type: {
+                                    name: "String",
+                                    kind: "SCALAR",
+                                    isNullable: true,
+                                    isList: false,
+                                    isListNullable: true,
+                                },
+                                args: [],
+                                requiresArguments: false,
+                            },
+                        },
+                    ],
+                    displayName: "scalarField",
+                },
+            ],
         },
         parentPathSpecs: [],
     },
@@ -88,7 +110,29 @@ export const ScalarFieldWithNodeQuery: Story = {
         },
         view: {
             objectName: "MyType",
-            fields: [{ path: ["scalarField"], displayName: "scalarField" }],
+            fields: [
+                {
+                    path: [
+                        {
+                            str: "scalarField",
+                            gqlField: {
+                                name: "scalarField",
+                                description: "A field.",
+                                type: {
+                                    name: "String",
+                                    kind: "SCALAR",
+                                    isNullable: true,
+                                    isList: false,
+                                    isListNullable: true,
+                                },
+                                args: [],
+                                requiresArguments: false,
+                            },
+                        },
+                    ],
+                    displayName: "scalarField",
+                },
+            ],
         },
         parentPathSpecs: [],
     },

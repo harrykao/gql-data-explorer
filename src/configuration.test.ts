@@ -20,8 +20,9 @@ describe("validates config", () => {
             views: [{ objectName: "MissingObject", fields: [] }],
         };
         const introspection = new Introspection(getTestSchema(SCHEMA));
-        const result = validateConfiguration(config, introspection);
-        expect(result).toEqual(["Type `MissingObject` does not exist."]);
+        const [validatedConfig, errors] = validateConfiguration(config, introspection);
+        expect(validatedConfig).toBeNull();
+        expect(errors).toEqual(["Type `MissingObject` does not exist."]);
     });
 
     it("returns error when field doesn't exist", () => {
@@ -34,8 +35,9 @@ describe("validates config", () => {
             ],
         };
         const introspection = new Introspection(getTestSchema(SCHEMA));
-        const result = validateConfiguration(config, introspection);
-        expect(result).toEqual(["Field `Object.missingField` does not exist."]);
+        const [validatedConfig, errors] = validateConfiguration(config, introspection);
+        expect(validatedConfig).toBeNull();
+        expect(errors).toEqual(["Field `Object.missingField` does not exist."]);
     });
 
     it("succeeds when field exists", () => {
@@ -48,8 +50,28 @@ describe("validates config", () => {
             ],
         };
         const introspection = new Introspection(getTestSchema(SCHEMA));
-        const result = validateConfiguration(config, introspection);
-        expect(result).toEqual([]);
+        const [validatedConfig, errors] = validateConfiguration(config, introspection);
+        expect(validatedConfig).toEqual({
+            views: [
+                {
+                    objectName: "Object",
+                    fields: [
+                        {
+                            path: [
+                                {
+                                    str: "field",
+                                    gqlField: introspection
+                                        .getObjectByTypeName("Object")
+                                        .fields.get("field"),
+                                },
+                            ],
+                            displayName: null,
+                        },
+                    ],
+                },
+            ],
+        });
+        expect(errors).toEqual([]);
     });
 
     it("fails when intermediate path part is not an object", () => {
@@ -62,8 +84,9 @@ describe("validates config", () => {
             ],
         };
         const introspection = new Introspection(getTestSchema(SCHEMA));
-        const result = validateConfiguration(config, introspection);
-        expect(result).toEqual([
+        const [validatedConfig, errors] = validateConfiguration(config, introspection);
+        expect(validatedConfig).toBeNull();
+        expect(errors).toEqual([
             "Field `Object.field.anotherField` does not point to a valid field.",
         ]);
     });
@@ -78,7 +101,33 @@ describe("validates config", () => {
             ],
         };
         const introspection = new Introspection(getTestSchema(SCHEMA));
-        const result = validateConfiguration(config, introspection);
-        expect(result).toEqual([]);
+        const [validatedConfig, errors] = validateConfiguration(config, introspection);
+        expect(validatedConfig).toEqual({
+            views: [
+                {
+                    objectName: "Object",
+                    fields: [
+                        {
+                            path: [
+                                {
+                                    str: "nestedObject",
+                                    gqlField: introspection
+                                        .getObjectByTypeName("Object")
+                                        .fields.get("nestedObject"),
+                                },
+                                {
+                                    str: "field",
+                                    gqlField: introspection
+                                        .getObjectByTypeName("Object")
+                                        .fields.get("field"),
+                                },
+                            ],
+                            displayName: null,
+                        },
+                    ],
+                },
+            ],
+        });
+        expect(errors).toEqual([]);
     });
 });

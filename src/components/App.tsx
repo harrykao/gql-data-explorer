@@ -1,6 +1,6 @@
 import { useParams } from "@tanstack/react-router";
 import React from "react";
-import useConfiguration, { Config, validateConfiguration } from "../configuration";
+import useConfiguration, { validateConfiguration, ValidatedConfig } from "../configuration";
 import useIntrospection from "../introspection";
 import { parseUrlPath, PathSpec } from "../pathSpecs";
 import useTargetObjectData from "../queryBuilder";
@@ -9,7 +9,7 @@ import GqlList from "./GqlList";
 import GqlObject from "./GqlObject";
 
 interface GqlDataProps {
-    config: Config;
+    config: ValidatedConfig;
     pathSpecs: PathSpec[];
 }
 
@@ -54,14 +54,14 @@ function App() {
         return null;
     }
 
-    const validationErrors = validateConfiguration(config, introspection);
+    const [validatedConfig, errors] = validateConfiguration(config, introspection);
 
-    if (validationErrors.length) {
+    if (!validatedConfig) {
         return (
             <>
                 <p>Configuration validation errors:</p>
                 <ul>
-                    {validationErrors.map((e) => (
+                    {errors.map((e) => (
                         <li key={e}>{e}</li>
                     ))}
                 </ul>
@@ -69,7 +69,7 @@ function App() {
         );
     }
 
-    return <GqlData config={config} pathSpecs={pathSpecs} />;
+    return <GqlData config={validatedConfig} pathSpecs={pathSpecs} />;
 }
 
 export default App;

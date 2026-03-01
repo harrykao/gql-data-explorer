@@ -1,32 +1,35 @@
 import { describe, expect, it } from "vitest";
 import { getDisplayFields } from "./dataProcessor";
-import { GqlFieldDef } from "./introspection";
+import { Introspection } from "./introspection";
+import { getTestSchema } from "./test_schemas/testSchemas";
 
 describe("gets display fields", () => {
     it("returns scalar", () => {
-        const fieldDef: GqlFieldDef = {
-            name: "scalarField",
-            description: "A field.",
-            type: {
-                name: "String",
-                kind: "SCALAR",
-                isNullable: true,
-                isList: false,
-                isListNullable: true,
-            },
-            args: [],
-            requiresArguments: false,
-        };
+        const TEST_SCHEMA = `
+            type Query {
+                scalarField: String
+            }
+        `;
+
+        const introspection = new Introspection(getTestSchema(TEST_SCHEMA));
+        const gqlObject = introspection.getObjectByTypeName("Query");
+        const gqlField = gqlObject.fields.get("scalarField");
+
+        if (gqlField === undefined) {
+            throw new Error();
+        }
+
         const displayField = getDisplayFields(
+            gqlObject,
+            { scalarField: "foo", __typename: "Query" },
             {
-                name: "MyType",
-                description: "Object description.",
-                fields: new Map([["scalarField", fieldDef]]),
-            },
-            { scalarField: "foo", __typename: "MyType" },
-            {
-                objectName: "MyType",
-                fields: [{ path: ["scalarField"], displayName: "Scalar Field" }],
+                objectName: "Query",
+                fields: [
+                    {
+                        path: [{ str: "scalarField", gqlField }],
+                        displayName: "Scalar Field",
+                    },
+                ],
             },
         );
 
@@ -34,36 +37,45 @@ describe("gets display fields", () => {
             {
                 label: "Scalar Field",
                 value: "foo",
-                fieldDef,
-                fieldConfig: { path: ["scalarField"], displayName: "Scalar Field" },
+                fieldDef: gqlField,
+                fieldConfig: {
+                    path: [{ str: "scalarField", gqlField }],
+                    displayName: "Scalar Field",
+                },
             },
         ]);
     });
 
     it("returns object", () => {
-        const fieldDef: GqlFieldDef = {
-            name: "objectField",
-            description: "A field.",
-            type: {
-                name: "Object",
-                kind: "OBJECT",
-                isNullable: true,
-                isList: false,
-                isListNullable: true,
-            },
-            args: [],
-            requiresArguments: false,
-        };
+        const TEST_SCHEMA = `
+            type Query {
+                objectField: Object
+            }
+
+            type Object {
+                scalarField: String
+            }
+        `;
+
+        const introspection = new Introspection(getTestSchema(TEST_SCHEMA));
+        const gqlObject = introspection.getObjectByTypeName("Query");
+        const gqlField = gqlObject.fields.get("objectField");
+
+        if (gqlField === undefined) {
+            throw new Error();
+        }
+
         const displayField = getDisplayFields(
+            gqlObject,
+            { __typename: "Object" }, // no `objectField`; it won't be included in the query
             {
-                name: "MyType",
-                description: "Object description.",
-                fields: new Map([["objectField", fieldDef]]),
-            },
-            { __typename: "MyType" }, // no `objectField`; it won't be included in the query
-            {
-                objectName: "MyType",
-                fields: [{ path: ["objectField"], displayName: "Object Field" }],
+                objectName: "Query",
+                fields: [
+                    {
+                        path: [{ str: "objectField", gqlField }],
+                        displayName: "Object Field",
+                    },
+                ],
             },
         );
 
@@ -71,49 +83,64 @@ describe("gets display fields", () => {
             {
                 label: "Object Field",
                 value: null,
-                fieldDef,
-                fieldConfig: { path: ["objectField"], displayName: "Object Field" },
+                fieldDef: gqlField,
+                fieldConfig: {
+                    path: [{ str: "objectField", gqlField }],
+                    displayName: "Object Field",
+                },
             },
         ]);
     });
 
     it("gets value for multi-part path", () => {
-        const fieldDef: GqlFieldDef = {
-            name: "objectField",
-            description: "A field.",
-            type: {
-                name: "Object",
-                kind: "OBJECT",
-                isNullable: true,
-                isList: false,
-                isListNullable: true,
-            },
-            args: [],
-            requiresArguments: false,
-        };
+        const TEST_SCHEMA = `
+            type Query {
+                objectField: MyType
+            }
+
+            type MyType {
+                nestedField: String
+            }
+        `;
+
+        const introspection = new Introspection(getTestSchema(TEST_SCHEMA));
+        const gqlQueryDef = introspection.getObjectByTypeName("Query");
+        const gqlQueryField = gqlQueryDef.fields.get("objectField");
+        const gqlMyTypeDef = introspection.getObjectByTypeName("MyType");
+        const gqlMyTypeField = gqlMyTypeDef.fields.get("nestedField");
+
+        if (gqlQueryField === undefined || gqlMyTypeField === undefined) {
+            throw new Error();
+        }
+
         const displayField = getDisplayFields(
+            gqlQueryDef,
+            { objectField: { nestedField: "foo" }, __typename: "Query" },
             {
-                name: "MyType",
-                description: "Object description.",
-                fields: new Map([["objectField", fieldDef]]),
-            },
-            { objectField: { nestedField: "foo" }, __typename: "MyType" },
-            {
-                objectName: "MyType",
+                objectName: "Query",
                 fields: [
-                    { path: ["objectField", "nestedField"], displayName: "Object's Nested Field" },
+                    {
+                        path: [
+                            { str: "objectField", gqlField: gqlQueryField },
+                            { str: "nestedField", gqlField: gqlMyTypeField },
+                        ],
+                        displayName: "MyType's Nested Field",
+                    },
                 ],
             },
         );
 
         expect(displayField).toEqual([
             {
-                label: "Object's Nested Field",
+                label: "MyType's Nested Field",
                 value: "foo",
-                fieldDef,
+                fieldDef: gqlMyTypeField,
                 fieldConfig: {
-                    path: ["objectField", "nestedField"],
-                    displayName: "Object's Nested Field",
+                    path: [
+                        { str: "objectField", gqlField: gqlQueryField },
+                        { str: "nestedField", gqlField: gqlMyTypeField },
+                    ],
+                    displayName: "MyType's Nested Field",
                 },
             },
         ]);

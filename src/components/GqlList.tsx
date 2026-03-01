@@ -1,5 +1,5 @@
 import React from "react";
-import { View } from "../configuration";
+import { ValidatedView } from "../configuration";
 import { getDisplayFields } from "../dataProcessor";
 import { GqlObjectDef } from "../introspection";
 import { PathSpec } from "../pathSpecs";
@@ -9,7 +9,7 @@ import Link from "./Link";
 interface GqlListProps {
     def: GqlObjectDef;
     data: readonly GqlObjectData[];
-    view: View;
+    view: ValidatedView;
     parentPathSpecs: readonly PathSpec[];
 }
 
@@ -29,7 +29,7 @@ export default function GqlList(props: GqlListProps) {
                 <tr key="header">
                     {props.view.fields.map((field) => (
                         <th
-                            key={field.path.join(".")}
+                            key={field.path.map((pathPart) => pathPart.str).join(".")}
                             style={{ textAlign: "left", verticalAlign: "top" }}
                         >
                             {field.displayName}
@@ -55,7 +55,7 @@ interface RowProps {
     index: number;
     def: GqlObjectDef;
     data: GqlObjectData;
-    view: View;
+    view: ValidatedView;
     parentPathSpecs: readonly PathSpec[];
 }
 
@@ -68,7 +68,7 @@ function Row(props: RowProps) {
                 if (displayField.value) {
                     content = <>{displayField.value}</>;
                 } else if (displayField.fieldDef.requiresArguments) {
-                    content = <>{displayField.fieldConfig.path[0]} (requires arguments)</>;
+                    content = <>{displayField.fieldConfig.path[0].str} (requires arguments)</>;
                 } else {
                     content = (
                         <Link
@@ -80,7 +80,13 @@ function Row(props: RowProps) {
                                     null,
                                     props.index,
                                 ),
-                                new PathSpec(displayField.fieldConfig.path[0], null, null),
+                                new PathSpec(
+                                    displayField.fieldConfig.path.map(
+                                        (pathPart) => pathPart.str,
+                                    )[0],
+                                    null,
+                                    null,
+                                ),
                             ]}
                             args={displayField.fieldDef.args}
                             requiresArguments={displayField.fieldDef.requiresArguments}
@@ -90,7 +96,9 @@ function Row(props: RowProps) {
 
                 return (
                     <td
-                        key={displayField.fieldConfig.path.join(".")}
+                        key={displayField.fieldConfig.path
+                            .map((pathPart) => pathPart.str)
+                            .join(".")}
                         style={{ verticalAlign: "top" }}
                     >
                         {content}
