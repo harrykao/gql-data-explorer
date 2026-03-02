@@ -65,7 +65,7 @@ function Row(props: RowProps) {
             {getDisplayFields(props.def, props.data, props.view).map((displayField) => {
                 let content: React.JSX.Element | null = null;
 
-                if (displayField.value !== null && !displayField.fieldConfig.linkPath) {
+                if (displayField.value !== undefined && !displayField.fieldConfig.linkPath) {
                     content = <>{displayField.value}</>;
                 } else if (displayField.fieldDef.requiresArguments) {
                     content = <>{displayField.fieldConfig.path[0].str} (requires arguments)</>;

@@ -41,7 +41,7 @@ export default function GqlObject(props: Props) {
                 </RouterLink>
             )}
             {getDisplayFields(props.def, props.data, props.view).map((displayField) => {
-                if (displayField.value !== null && !displayField.fieldConfig.linkPath) {
+                if (displayField.value !== undefined && !displayField.fieldConfig.linkPath) {
                     return (
                         <div
                             key={displayField.fieldConfig.path

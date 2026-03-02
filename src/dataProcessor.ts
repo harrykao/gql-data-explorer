@@ -4,7 +4,7 @@ import { GqlObjectData } from "./types";
 
 interface DisplayField {
     label: string;
-    value: string | null; // set for scalars, null for objects
+    value: string | null | undefined; // set or null for scalars, undefined for objects
     fieldDef: GqlFieldDef;
     fieldConfig: ValidatedField;
 }
@@ -24,27 +24,43 @@ export function getDisplayFields(
     return view.fields.map((fieldConfig) => {
         const fieldDef = fieldConfig.path[fieldConfig.path.length - 1].gqlField;
         const dataValue = getDataValue(data, fieldConfig);
-
-        // scalar values
-        if (fieldDef.type.kind !== "OBJECT") {
-            const valueStr = typeof dataValue === "string" ? dataValue : "(unsupported type)";
-            return {
-                label: fieldConfig.displayName ?? fieldDef.name,
-                value: valueStr,
-                fieldDef,
-                fieldConfig,
-            };
-        }
+        let displayValue: string | null | undefined = undefined;
 
         // objects
-        else {
-            return {
-                label: fieldConfig.displayName ?? fieldDef.name,
-                value: null,
-                fieldDef,
-                fieldConfig,
-            };
+        if (fieldDef.type.kind === "OBJECT") {
+            displayValue = undefined;
         }
+
+        // scalar values
+        else {
+            if (fieldDef.type.kind === "SCALAR") {
+                switch (fieldDef.type.name) {
+                    case "Boolean":
+                        displayValue = dataValue ? "true" : "false";
+                        break;
+                    case "ID":
+                        displayValue = String(dataValue);
+                        break;
+                    case "String":
+                        displayValue = String(dataValue);
+                        break;
+                    default:
+                        displayValue = `unhandled scalar type: ${fieldDef.type.name}`;
+                        break;
+                }
+            } else if (fieldDef.type.kind === "ENUM") {
+                displayValue = String(dataValue);
+            } else {
+                displayValue = `unhandled field kind: ${fieldDef.type.kind}`;
+            }
+        }
+
+        return {
+            label: fieldConfig.displayName ?? fieldDef.name,
+            value: displayValue,
+            fieldDef,
+            fieldConfig,
+        };
     });
 }
 
